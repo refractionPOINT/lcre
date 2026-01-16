@@ -16,9 +16,10 @@ import (
 
 // Runner executes Ghidra headless analysis
 type Runner struct {
-	ghidraPath string
-	timeout    time.Duration
-	decompile  bool
+	ghidraPath    string
+	timeout       time.Duration
+	decompile     bool
+	decompiledDir string // Optional: directory to store decompiled functions
 }
 
 // Run executes Ghidra analysis on the binary
@@ -46,16 +47,23 @@ func (r *Runner) Run(ctx context.Context, binaryPath string) (*model.AnalysisRes
 
 	// Build command
 	analyzeHeadless := r.getAnalyzeHeadless()
+
+	// Build script args - output file and optional decompiled directory
+	scriptArgs := outputFile
+	if r.decompiledDir != "" {
+		scriptArgs = outputFile + " " + r.decompiledDir
+	}
+
 	args := []string{
 		projectDir,
 		"LCREProject",
 		"-import", binaryPath,
 		"-scriptPath", scriptPath,
-		"-postScript", "ExportAnalysis.java", outputFile,
+		"-postScript", "ExportAnalysis.java", scriptArgs,
 		"-deleteProject", // Clean up project after analysis
 	}
 
-	if r.decompile {
+	if r.decompile && r.decompiledDir == "" {
 		args = append(args, "-postScript", "DecompileAll.java")
 	}
 

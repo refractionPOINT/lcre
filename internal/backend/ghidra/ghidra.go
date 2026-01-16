@@ -12,10 +12,11 @@ import (
 
 // Options configures the Ghidra backend
 type Options struct {
-	GhidraPath string
-	Timeout    time.Duration
-	Decompile  bool
-	ScriptPath string
+	GhidraPath    string
+	Timeout       time.Duration
+	Decompile     bool
+	ScriptPath    string
+	DecompiledDir string // Directory to store decompiled function files
 }
 
 // Backend implements Ghidra-based binary analysis
@@ -80,9 +81,10 @@ func (b *Backend) Analyze(ctx context.Context, path string, opts backend.Analysi
 	start := time.Now()
 
 	runner := &Runner{
-		ghidraPath: b.getGhidraPath(),
-		timeout:    b.opts.Timeout,
-		decompile:  b.opts.Decompile,
+		ghidraPath:    b.getGhidraPath(),
+		timeout:       b.opts.Timeout,
+		decompile:     b.opts.Decompile,
+		decompiledDir: b.opts.DecompiledDir,
 	}
 
 	result, err := runner.Run(ctx, path)
@@ -95,4 +97,9 @@ func (b *Backend) Analyze(ctx context.Context, path string, opts backend.Analysi
 	result.Timestamp = start
 
 	return result, nil
+}
+
+// SetDecompiledDir sets the directory for storing decompiled functions.
+func (b *Backend) SetDecompiledDir(dir string) {
+	b.opts.DecompiledDir = dir
 }

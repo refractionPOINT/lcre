@@ -3,6 +3,7 @@
 //@author LCRE
 
 import ghidra.app.script.GhidraScript;
+import ghidra.app.decompiler.*;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.symbol.*;
 import ghidra.program.model.mem.*;
@@ -18,22 +19,38 @@ public class ExportAnalysis extends GhidraScript {
 
     private PrintWriter writer;
     private boolean firstItem;
+    private DecompInterface decompiler;
+    private String decompiledDir;
 
     @Override
     public void run() throws Exception {
         String[] args = getScriptArgs();
         if (args.length < 1) {
-            printerr("Usage: ExportAnalysis.java <output_file>");
+            printerr("Usage: ExportAnalysis.java <output_file> [decompiled_dir]");
             return;
         }
 
         String outputPath = args[0];
+        decompiledDir = args.length > 1 ? args[1] : null;
+
         writer = new PrintWriter(new FileWriter(outputPath));
+
+        // Initialize decompiler
+        decompiler = new DecompInterface();
+        decompiler.openProgram(currentProgram);
 
         try {
             writeJson();
+
+            // Export decompiled functions if directory specified
+            if (decompiledDir != null) {
+                exportDecompiledFunctions();
+            }
         } finally {
             writer.close();
+            if (decompiler != null) {
+                decompiler.dispose();
+            }
         }
 
         println("Analysis exported to: " + outputPath);
@@ -368,5 +385,69 @@ public class ExportAnalysis extends GhidraScript {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    private void exportDecompiledFunctions() throws Exception {
+        File dir = new File(decompiledDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        FunctionIterator funcIter = currentProgram.getFunctionManager().getFunctions(true);
+        int count = 0;
+        int maxFunctions = 1000; // Limit decompilation to top 1000 functions
+
+        println("Exporting decompiled functions to: " + decompiledDir);
+
+        while (funcIter.hasNext() && count < maxFunctions) {
+            if (monitor.isCancelled()) {
+                break;
+            }
+
+            Function func = funcIter.next();
+
+            // Skip external and thunk functions
+            if (func.isExternal() || func.isThunk()) {
+                continue;
+            }
+
+            String decompiled = decompileFunction(func);
+            if (decompiled != null && !decompiled.isEmpty()) {
+                // Sanitize function name for filename
+                String safeName = sanitizeFileName(func.getName());
+                File outFile = new File(dir, safeName + ".c");
+
+                PrintWriter funcWriter = new PrintWriter(new FileWriter(outFile));
+                try {
+                    funcWriter.print(decompiled);
+                } finally {
+                    funcWriter.close();
+                }
+
+                count++;
+            }
+        }
+
+        println("Exported " + count + " decompiled functions");
+    }
+
+    private String decompileFunction(Function func) {
+        try {
+            DecompileResults results = decompiler.decompileFunction(func, 30, monitor);
+            if (results != null && results.decompileCompleted()) {
+                DecompiledFunction decompFunc = results.getDecompiledFunction();
+                if (decompFunc != null) {
+                    return decompFunc.getC();
+                }
+            }
+        } catch (Exception e) {
+            // Silently ignore decompilation failures
+        }
+        return null;
+    }
+
+    private String sanitizeFileName(String name) {
+        return name.replaceAll("[<>:\"/\\\\|?*]", "_")
+                   .replaceAll("\\s+", "_");
     }
 }
