@@ -1,4 +1,4 @@
-.PHONY: all build test clean install docker lint fmt vet
+.PHONY: all build test test-race test-short clean install docker lint fmt vet
 
 BINARY_NAME=lcre
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -14,7 +14,10 @@ install:
 	go install $(LDFLAGS) ./cmd/lcre
 
 test:
-	go test -v -race -cover ./...
+	go test -v -cover ./...
+
+test-race:
+	CGO_ENABLED=1 go test -v -race -cover ./...
 
 test-short:
 	go test -v -short ./...
