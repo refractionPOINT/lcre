@@ -174,6 +174,21 @@ lcre capabilities | jq '.commands[] | select(.name == "query") | .subcommands'
 
 See the [Claude Code Quick-Start Guide](docs/CLAUDE_CODE_GUIDE.md) for AI-assisted binary analysis workflows.
 
+### Example: AI-Powered Malware Analysis
+
+We conducted an experiment where Claude Code was given an unknown malware sample and asked to determine if it was malicious using only LCRE commands. The AI performed:
+
+- Initial triage and hash extraction
+- Section entropy analysis (detected packing)
+- IOC extraction (found Bitcoin addresses)
+- String searches (found ransomware artifacts)
+- Import analysis (identified crypto and persistence APIs)
+- Ghidra deep analysis (decompiled key functions)
+
+The AI correctly identified the sample as ransomware with HIGH confidence, documenting specific CLI evidence for every finding.
+
+**[Read the Full Analysis Report](docs/EXAMPLE_AI_MALWARE_ANALYSIS.md)** - A detailed walkthrough of the commands used and evidence discovered.
+
 ## Output Schema
 
 ### Analysis Result
