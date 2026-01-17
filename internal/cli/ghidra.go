@@ -57,12 +57,25 @@ func runGhidraAnalyze(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Create options for Ghidra backend
+	opts := ghidra.Options{
+		GhidraPath: ghidraPath,
+		Timeout:    ghidraTimeout,
+		Decompile:  ghidraDecompile,
+	}
+
+	// If decompile is enabled, create a temp directory for decompiled files
+	if ghidraDecompile {
+		decompiledDir, err := os.MkdirTemp("", "lcre-decompiled-")
+		if err != nil {
+			return fmt.Errorf("failed to create temp directory for decompiled files: %w", err)
+		}
+		defer os.RemoveAll(decompiledDir)
+		opts.DecompiledDir = decompiledDir
+	}
+
 	// Create Ghidra backend
-	b := ghidra.New(ghidra.Options{
-		GhidraPath:  ghidraPath,
-		Timeout:     ghidraTimeout,
-		Decompile:   ghidraDecompile,
-	})
+	b := ghidra.New(opts)
 
 	// Check availability
 	available, reason := b.Available()
@@ -76,7 +89,7 @@ func runGhidraAnalyze(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), ghidraTimeout)
 	defer cancel()
 
-	opts := backend.AnalysisOptions{
+	analysisOpts := backend.AnalysisOptions{
 		Timeout:         ghidraTimeout,
 		IncludeStrings:  true,
 		MinStringLength: 4,
@@ -88,7 +101,7 @@ func runGhidraAnalyze(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Analyzing %s with Ghidra (this may take a while)...\n", binaryPath)
 	}
 
-	result, err := b.Analyze(ctx, binaryPath, opts)
+	result, err := b.Analyze(ctx, binaryPath, analysisOpts)
 	if err != nil {
 		return fmt.Errorf("Ghidra analysis failed: %w", err)
 	}

@@ -63,10 +63,6 @@ func (r *Runner) Run(ctx context.Context, binaryPath string) (*model.AnalysisRes
 
 	args = append(args, "-deleteProject") // Clean up project after analysis
 
-	if r.decompile && r.decompiledDir == "" {
-		args = append(args, "-postScript", "DecompileAll.java")
-	}
-
 	cmd := exec.CommandContext(ctx, analyzeHeadless, args...)
 	cmd.Stdout = os.Stderr // Ghidra outputs to stdout, redirect to stderr
 	cmd.Stderr = os.Stderr
