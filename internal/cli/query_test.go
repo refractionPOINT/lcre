@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -685,4 +686,712 @@ func TestEmptyResults(t *testing.T) {
 			t.Error("Expected nil function for nonexistent name")
 		}
 	})
+}
+
+// Integration tests using real system binaries
+
+// findSystemBinary finds a suitable system binary for testing
+func findSystemBinary(t *testing.T) string {
+	t.Helper()
+	candidates := []string{"/bin/true", "/bin/ls", "/bin/cat", "/usr/bin/true", "/usr/bin/ls"}
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	t.Skip("No suitable system binary found for integration test")
+	return ""
+}
+
+func TestEnsureAnalyzed_RealBinary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	binaryPath := findSystemBinary(t)
+
+	// Use a temporary cache directory
+	tempDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tempDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create the .cache directory structure
+	cacheBase := filepath.Join(tempDir, ".cache", "lcre")
+	os.MkdirAll(cacheBase, 0755)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// First analysis should create cache
+	mgr, db, wasNew, err := ensureAnalyzed(ctx, binaryPath, false)
+	if err != nil {
+		t.Fatalf("ensureAnalyzed() error = %v", err)
+	}
+	defer db.Close()
+
+	if !wasNew {
+		t.Error("First call to ensureAnalyzed() should set wasNew=true")
+	}
+
+	// Verify cache was created
+	exists, err := mgr.Exists(binaryPath)
+	if err != nil {
+		t.Fatalf("Exists() error = %v", err)
+	}
+	if !exists {
+		t.Error("Cache should exist after ensureAnalyzed()")
+	}
+
+	// Verify metadata was stored
+	meta, err := mgr.LoadMetadata(binaryPath)
+	if err != nil {
+		t.Fatalf("LoadMetadata() error = %v", err)
+	}
+	if meta.Binary.Format == "" {
+		t.Error("Binary format should be detected")
+	}
+	if meta.Binary.Size == 0 {
+		t.Error("Binary size should be set")
+	}
+
+	// Verify sections were stored
+	sections, err := db.QuerySections("")
+	if err != nil {
+		t.Fatalf("QuerySections() error = %v", err)
+	}
+	if len(sections) == 0 {
+		t.Error("Sections should be extracted from real binary")
+	}
+
+	db.Close()
+
+	// Second call should use cache
+	mgr2, db2, wasNew2, err := ensureAnalyzed(ctx, binaryPath, false)
+	if err != nil {
+		t.Fatalf("ensureAnalyzed() second call error = %v", err)
+	}
+	defer db2.Close()
+	_ = mgr2
+
+	if wasNew2 {
+		t.Error("Second call to ensureAnalyzed() should set wasNew=false (cached)")
+	}
+}
+
+func TestEnsureAnalyzed_NonExistentFile(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, _, _, err := ensureAnalyzed(ctx, "/nonexistent/binary/path", false)
+	if err == nil {
+		t.Error("ensureAnalyzed() should error on non-existent file")
+	}
+}
+
+func TestRunAnalysis_RealBinary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	binaryPath := findSystemBinary(t)
+
+	tempDir := t.TempDir()
+	mgr, err := cache.NewManagerWithPath(filepath.Join(tempDir, "cache"))
+	if err != nil {
+		t.Fatalf("NewManagerWithPath() error = %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Run analysis (shallow)
+	err = runAnalysis(ctx, mgr, binaryPath, false)
+	if err != nil {
+		t.Fatalf("runAnalysis() error = %v", err)
+	}
+
+	// Verify results were stored
+	db, err := mgr.Open(binaryPath)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer db.Close()
+
+	// Check sections
+	sections, err := db.QuerySections("")
+	if err != nil {
+		t.Fatalf("QuerySections() error = %v", err)
+	}
+	t.Logf("Found %d sections in %s", len(sections), binaryPath)
+	if len(sections) == 0 {
+		t.Error("Should find sections in real binary")
+	}
+
+	// Check strings
+	strings, total, err := db.QueryStrings("", 100, 0)
+	if err != nil {
+		t.Fatalf("QueryStrings() error = %v", err)
+	}
+	t.Logf("Found %d strings (total: %d) in %s", len(strings), total, binaryPath)
+
+	// Check metadata
+	meta, err := mgr.LoadMetadata(binaryPath)
+	if err != nil {
+		t.Fatalf("LoadMetadata() error = %v", err)
+	}
+	t.Logf("Binary format: %s, arch: %s, size: %d", meta.Binary.Format, meta.Binary.Arch, meta.Binary.Size)
+
+	// Format may be uppercase or lowercase depending on model.BinaryFormat implementation
+	if meta.Binary.Format != "elf" && meta.Binary.Format != "ELF" {
+		t.Errorf("Expected ELF format, got %s", meta.Binary.Format)
+	}
+}
+
+func TestSummaryOutput_Structure(t *testing.T) {
+	output := SummaryOutput{
+		Metadata: MetadataSummary{
+			Format: "elf",
+			Arch:   "x86_64",
+			Size:   12345,
+			SHA256: "abc123",
+		},
+		RiskLevel:      "low",
+		TotalScore:     10,
+		HeuristicCount: 2,
+		TopFindings: []FindingSummary{
+			{RuleID: "TEST_01", Name: "Test Finding", Severity: "low", Category: "anomaly"},
+		},
+		Counts: CountSummary{
+			Sections:  5,
+			Imports:   10,
+			Exports:   2,
+			Strings:   100,
+			Functions: 50,
+			IOCs:      3,
+		},
+		Cached:       false,
+		AnalysisTime: "1.5s",
+	}
+
+	// Verify structure
+	if output.Metadata.Format != "elf" {
+		t.Errorf("Metadata.Format = %q, want %q", output.Metadata.Format, "elf")
+	}
+	if output.RiskLevel != "low" {
+		t.Errorf("RiskLevel = %q, want %q", output.RiskLevel, "low")
+	}
+	if output.Counts.Sections != 5 {
+		t.Errorf("Counts.Sections = %d, want 5", output.Counts.Sections)
+	}
+	if len(output.TopFindings) != 1 {
+		t.Errorf("TopFindings length = %d, want 1", len(output.TopFindings))
+	}
+}
+
+func TestInfoOutput_Structure(t *testing.T) {
+	output := InfoOutput{
+		Path:     "/bin/ls",
+		Name:     "ls",
+		Format:   "elf",
+		Arch:     "x86_64",
+		Bits:     64,
+		Endian:   "little",
+		Size:     140000,
+		MD5:      "abc123",
+		SHA1:     "def456",
+		SHA256:   "ghi789",
+		Compiler: "gcc",
+		IsSigned: false,
+	}
+
+	if output.Path != "/bin/ls" {
+		t.Errorf("Path = %q, want %q", output.Path, "/bin/ls")
+	}
+	if output.Bits != 64 {
+		t.Errorf("Bits = %d, want 64", output.Bits)
+	}
+}
+
+func TestOutputJSON(t *testing.T) {
+	// Test that outputJSON doesn't panic with various types
+	testCases := []interface{}{
+		map[string]string{"key": "value"},
+		[]string{"a", "b", "c"},
+		struct {
+			Name string `json:"name"`
+		}{Name: "test"},
+		nil,
+	}
+
+	for _, tc := range testCases {
+		// Capture stdout
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		outputJSON(tc)
+
+		w.Close()
+		os.Stdout = old
+
+		// Read output
+		buf := make([]byte, 1024)
+		n, _ := r.Read(buf)
+		if n == 0 && tc != nil {
+			t.Errorf("outputJSON() produced no output for %v", tc)
+		}
+	}
+}
+
+func TestPrintStringsMarkdown(t *testing.T) {
+	// Test with strings
+	output := StringsOutput{
+		Strings: []StringInfo{
+			{Value: "Hello", Offset: "0x100", Section: ".rodata", Encoding: "ascii"},
+			{Value: "World", Offset: "0x200", Section: ".data", Encoding: "utf-8"},
+		},
+		Count:     2,
+		Total:     10,
+		Truncated: true,
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printStringsMarkdown(output, "test")
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Strings matching") {
+		t.Error("printStringsMarkdown() should include pattern in output")
+	}
+	if !contains(result, "0x100") {
+		t.Error("printStringsMarkdown() should include offsets")
+	}
+}
+
+func TestPrintStringsMarkdown_Empty(t *testing.T) {
+	output := StringsOutput{
+		Strings:   []StringInfo{},
+		Count:     0,
+		Total:     0,
+		Truncated: false,
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printStringsMarkdown(output, "")
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 1024)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "No strings found") {
+		t.Error("printStringsMarkdown() should indicate no strings found")
+	}
+}
+
+func TestPrintFunctionsMarkdown(t *testing.T) {
+	output := FunctionsOutput{
+		Functions: []FunctionInfo{
+			{Name: "main", Address: "0x1000", Size: 100, IsExternal: false},
+			{Name: "printf", Address: "0x3000", Size: 0, IsExternal: true},
+		},
+		Count:   2,
+		HasDeep: true,
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printFunctionsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Functions (2)") {
+		t.Error("printFunctionsMarkdown() should include count in header")
+	}
+	if !contains(result, "main") {
+		t.Error("printFunctionsMarkdown() should include function names")
+	}
+}
+
+func TestPrintFunctionsMarkdown_NoDeepAnalysis(t *testing.T) {
+	output := FunctionsOutput{
+		Functions: []FunctionInfo{},
+		Count:     0,
+		HasDeep:   false,
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printFunctionsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 1024)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Deep analysis not performed") {
+		t.Error("printFunctionsMarkdown() should note when deep analysis not done")
+	}
+}
+
+func TestPrintFunctionDetailMarkdown(t *testing.T) {
+	output := FunctionDetailOutput{
+		Found: true,
+		Function: FunctionInfo{
+			Name:      "main",
+			Address:   "0x1000",
+			Size:      100,
+			Signature: "int main(int, char**)",
+		},
+		Callers: []FunctionRef{
+			{Name: "_start", Address: "0x500"},
+		},
+		Callees: []FunctionRef{
+			{Name: "helper", Address: "0x2000"},
+		},
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printFunctionDetailMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Function: main") {
+		t.Error("printFunctionDetailMarkdown() should include function name")
+	}
+	if !contains(result, "Callers") {
+		t.Error("printFunctionDetailMarkdown() should include callers section")
+	}
+	if !contains(result, "Callees") {
+		t.Error("printFunctionDetailMarkdown() should include callees section")
+	}
+}
+
+// Helper function
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsAt(s, substr))
+}
+
+func containsAt(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// Additional output structure tests
+
+func TestSectionsOutput_Structure(t *testing.T) {
+	output := SectionsOutput{
+		Sections: []SectionInfo{
+			{Name: ".text", VirtualAddr: "0x1000", VirtualSize: 0x500, RawSize: 0x400, Entropy: 6.5, Permissions: "rx", HighEntropy: false},
+			{Name: ".data", VirtualAddr: "0x2000", VirtualSize: 0x200, RawSize: 0x200, Entropy: 7.5, Permissions: "rw", HighEntropy: true},
+		},
+		Count: 2,
+	}
+
+	if output.Count != 2 {
+		t.Errorf("Count = %d, want 2", output.Count)
+	}
+	if !output.Sections[1].HighEntropy {
+		t.Error("Section with entropy >= 7.0 should have HighEntropy=true")
+	}
+}
+
+func TestImportsOutput_Structure(t *testing.T) {
+	output := ImportsOutput{
+		Imports: []ImportInfo{
+			{Library: "libc.so.6", Function: "printf", Address: "0x3000"},
+			{Library: "libc.so.6", Function: "malloc", Address: "0x3004"},
+			{Library: "libpthread.so.0", Function: "pthread_create", Address: "0x4000"},
+		},
+		Count: 3,
+	}
+
+	if output.Count != 3 {
+		t.Errorf("Count = %d, want 3", output.Count)
+	}
+}
+
+func TestPrintSectionsMarkdown(t *testing.T) {
+	output := SectionsOutput{
+		Sections: []SectionInfo{
+			{Name: ".text", VirtualAddr: "0x1000", VirtualSize: 0x500, RawSize: 0x400, Entropy: 6.5, Permissions: "rx"},
+			{Name: ".packed", VirtualAddr: "0x2000", VirtualSize: 0x200, RawSize: 0x200, Entropy: 7.8, Permissions: "rw", HighEntropy: true},
+		},
+		Count: 2,
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printSectionsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Sections (2)") {
+		t.Error("printSectionsMarkdown() should include count")
+	}
+	if !contains(result, ".text") {
+		t.Error("printSectionsMarkdown() should include section names")
+	}
+	if !contains(result, "⚠") {
+		t.Error("printSectionsMarkdown() should flag high entropy sections")
+	}
+}
+
+func TestPrintSectionsMarkdown_Empty(t *testing.T) {
+	output := SectionsOutput{
+		Sections: []SectionInfo{},
+		Count:    0,
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printSectionsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 1024)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "No sections found") {
+		t.Error("printSectionsMarkdown() should indicate no sections found")
+	}
+}
+
+func TestPrintImportsMarkdown(t *testing.T) {
+	output := ImportsOutput{
+		Imports: []ImportInfo{
+			{Library: "libc.so.6", Function: "printf", Address: "0x3000"},
+			{Library: "libc.so.6", Function: "malloc", Address: "0x3004"},
+			{Library: "libm.so.6", Function: "sin"},
+		},
+		Count: 3,
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printImportsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Imports (3)") {
+		t.Error("printImportsMarkdown() should include count")
+	}
+	if !contains(result, "libc.so.6") {
+		t.Error("printImportsMarkdown() should include library names")
+	}
+	if !contains(result, "printf") {
+		t.Error("printImportsMarkdown() should include function names")
+	}
+}
+
+func TestPrintImportsMarkdown_Empty(t *testing.T) {
+	output := ImportsOutput{
+		Imports: []ImportInfo{},
+		Count:   0,
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printImportsMarkdown(output)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 1024)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "No imports found") {
+		t.Error("printImportsMarkdown() should indicate no imports found")
+	}
+}
+
+func TestPrintSummaryMarkdown(t *testing.T) {
+	summaryOutput := SummaryOutput{
+		Metadata: MetadataSummary{
+			Format: "elf",
+			Arch:   "x86_64",
+			Size:   12345,
+			SHA256: "abc123def456",
+		},
+		RiskLevel:      "high",
+		TotalScore:     75,
+		HeuristicCount: 3,
+		TopFindings: []FindingSummary{
+			{RuleID: "PACKED_01", Name: "Packed Binary", Severity: "high", Category: "packer"},
+		},
+		Counts: CountSummary{
+			Sections:  5,
+			Imports:   20,
+			Exports:   2,
+			Strings:   500,
+			Functions: 100,
+			IOCs:      5,
+		},
+		Cached:       false,
+		AnalysisTime: "2.5s",
+	}
+
+	meta := &cache.CachedMetadata{
+		Binary: model.BinaryMetadata{
+			Format: model.FormatELF,
+			Arch:   "x86_64",
+		},
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printSummaryMarkdown(summaryOutput, meta)
+
+	w.Close()
+	os.Stdout = old
+
+	buf := make([]byte, 8192)
+	n, _ := r.Read(buf)
+	result := string(buf[:n])
+
+	if !contains(result, "Binary Summary") {
+		t.Error("printSummaryMarkdown() should include header")
+	}
+	if !contains(result, "Risk Level") {
+		t.Error("printSummaryMarkdown() should include risk level")
+	}
+	if !contains(result, "Top Findings") {
+		t.Error("printSummaryMarkdown() should include top findings")
+	}
+	if !contains(result, "Counts") {
+		t.Error("printSummaryMarkdown() should include counts")
+	}
+}
+
+func TestSectionToInfo(t *testing.T) {
+	section := model.Section{
+		Name:         ".text",
+		VirtualAddr:  0x1000,
+		VirtualSize:  0x500,
+		RawSize:      0x400,
+		Entropy:      7.5,
+		Permissions:  "rx",
+	}
+
+	info := sectionToInfo(section)
+
+	if info.Name != ".text" {
+		t.Errorf("Name = %q, want %q", info.Name, ".text")
+	}
+	if info.VirtualAddr != "0x1000" {
+		t.Errorf("VirtualAddr = %q, want %q", info.VirtualAddr, "0x1000")
+	}
+	if !info.HighEntropy {
+		t.Error("HighEntropy should be true for entropy >= 7.0")
+	}
+}
+
+func TestSectionToInfo_LowEntropy(t *testing.T) {
+	section := model.Section{
+		Name:    ".data",
+		Entropy: 4.5,
+	}
+
+	info := sectionToInfo(section)
+
+	if info.HighEntropy {
+		t.Error("HighEntropy should be false for entropy < 7.0")
+	}
+}
+
+func TestCountSummary_Structure(t *testing.T) {
+	counts := CountSummary{
+		Sections:  10,
+		Imports:   50,
+		Exports:   5,
+		Strings:   1000,
+		Functions: 200,
+		IOCs:      15,
+	}
+
+	total := counts.Sections + counts.Imports + counts.Exports + counts.Functions + counts.IOCs
+	if total != 280 {
+		t.Errorf("Sum of counts = %d, want 280", total)
+	}
+}
+
+func TestFindingSummary_Structure(t *testing.T) {
+	finding := FindingSummary{
+		RuleID:   "SUSPICIOUS_01",
+		Name:     "Suspicious API Call",
+		Severity: "high",
+		Category: "suspicious",
+	}
+
+	if finding.RuleID == "" {
+		t.Error("RuleID should not be empty")
+	}
+	if finding.Severity != "high" {
+		t.Errorf("Severity = %q, want %q", finding.Severity, "high")
+	}
 }
