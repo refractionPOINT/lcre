@@ -826,7 +826,8 @@ func parseAddress(s string) int64 {
 	var addr int64
 	s = strings.TrimSpace(s)
 	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
-		fmt.Sscanf(s, "0x%x", &addr)
+		// Parse hex value after stripping the prefix
+		fmt.Sscanf(s[2:], "%x", &addr)
 	} else {
 		fmt.Sscanf(s, "%d", &addr)
 	}

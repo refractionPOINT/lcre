@@ -166,7 +166,8 @@ func formatAddress(addr int64) string {
 func parseAddressArg(s string) int64 {
 	var addr int64
 	if len(s) > 2 && (s[:2] == "0x" || s[:2] == "0X") {
-		fmt.Sscanf(s, "0x%x", &addr)
+		// Use %x format which handles both 0x and 0X prefixes
+		fmt.Sscanf(s[2:], "%x", &addr)
 	} else {
 		fmt.Sscanf(s, "%d", &addr)
 	}
