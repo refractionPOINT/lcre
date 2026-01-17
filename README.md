@@ -67,6 +67,87 @@ lcre diff version1.exe version2.exe
 lcre report sample.exe -o json > report.json
 ```
 
+### Interactive Query (Cached Analysis)
+
+The query system provides instant access to analysis results. First query triggers analysis and caches results; subsequent queries are instant.
+
+```bash
+# Get a quick summary
+lcre query summary /bin/ls
+
+# Query with deep analysis (uses Ghidra)
+lcre query summary /bin/ls --deep
+
+# List sections with entropy info
+lcre query sections /bin/ls
+
+# Search strings
+lcre query strings /bin/ls --pattern "error"
+lcre query strings /bin/ls --limit 50 --offset 100
+
+# Get string at specific offset
+lcre query strings /bin/ls --at 0x1234
+
+# List imports (filter by library or function)
+lcre query imports /bin/ls
+lcre query imports /bin/ls --library libc
+lcre query imports /bin/ls --function printf
+
+# List exports
+lcre query exports /bin/ls --pattern main
+
+# Query IOCs
+lcre query iocs /bin/ls
+lcre query iocs /bin/ls --type url
+
+# Query heuristic matches
+lcre query heuristics /bin/ls
+lcre query heuristics /bin/ls --category packer
+
+# List functions (requires --deep)
+lcre query functions /bin/ls --deep
+lcre query functions /bin/ls --name main --deep
+
+# Get function details with callers/callees
+lcre query function /bin/ls main --deep
+lcre query function /bin/ls 0x401000 --deep
+
+# Query cross-references
+lcre query xrefs-to /bin/ls 0x401000 --deep
+lcre query xrefs-from /bin/ls 0x401000 --deep
+
+# Find call path between functions
+lcre query call-path /bin/ls main printf --deep
+
+# Hex dump bytes
+lcre query bytes /bin/ls --offset 0x1000 --length 256
+
+# Search for byte patterns
+lcre query search-bytes /bin/ls --pattern "48 89 e5"
+
+# Get decompiled function (requires --deep)
+lcre query decompile /bin/ls main --deep
+```
+
+### Cache Management
+
+```bash
+# List all cached analyses
+lcre cache list
+
+# Show cache info for a binary
+lcre cache info /bin/ls
+
+# Clear cache for specific binary
+lcre cache clear /bin/ls
+
+# Clear cache by SHA256 hash
+lcre cache clear abc123def456...
+
+# Clear all caches
+lcre cache clear
+```
+
 ### Ghidra Deep Analysis
 
 ```bash
