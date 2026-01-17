@@ -1,4 +1,4 @@
-.PHONY: all build test test-race test-short clean install docker lint fmt vet
+.PHONY: all build test test-race test-short clean install docker lint fmt vet release install-local
 
 BINARY_NAME=lcre
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -62,3 +62,16 @@ build-darwin:
 
 build-windows:
 	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o bin/$(BINARY_NAME)-windows-amd64.exe ./cmd/lcre
+
+# Release builds for Linux (used by installer)
+release: clean
+	@echo "Building release binaries..."
+	@mkdir -p dist
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 ./cmd/lcre
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 ./cmd/lcre
+	@echo "Release binaries created in dist/"
+	@ls -la dist/
+
+# Local installation using the installer script
+install-local:
+	@bash scripts/install.sh
