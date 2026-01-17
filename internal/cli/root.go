@@ -6,6 +6,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	// Register backends
+	_ "github.com/maxime/lcre/internal/backend/ghidra"
 )
 
 // Exit codes

@@ -103,3 +103,14 @@ func (b *Backend) Analyze(ctx context.Context, path string, opts backend.Analysi
 func (b *Backend) SetDecompiledDir(dir string) {
 	b.opts.DecompiledDir = dir
 }
+
+// Register registers this backend with the default registry.
+func Register() {
+	backend.DefaultRegistry.Register(New(Options{
+		Timeout: 5 * time.Minute,
+	}))
+}
+
+func init() {
+	Register()
+}

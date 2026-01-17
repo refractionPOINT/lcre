@@ -48,20 +48,20 @@ func (r *Runner) Run(ctx context.Context, binaryPath string) (*model.AnalysisRes
 	// Build command
 	analyzeHeadless := r.getAnalyzeHeadless()
 
-	// Build script args - output file and optional decompiled directory
-	scriptArgs := outputFile
-	if r.decompiledDir != "" {
-		scriptArgs = outputFile + " " + r.decompiledDir
-	}
-
 	args := []string{
 		projectDir,
 		"LCREProject",
 		"-import", binaryPath,
 		"-scriptPath", scriptPath,
-		"-postScript", "ExportAnalysis.java", scriptArgs,
-		"-deleteProject", // Clean up project after analysis
+		"-postScript", "ExportAnalysis.java", outputFile,
 	}
+
+	// Add decompiled directory as separate argument if specified
+	if r.decompiledDir != "" {
+		args = append(args, r.decompiledDir)
+	}
+
+	args = append(args, "-deleteProject") // Clean up project after analysis
 
 	if r.decompile && r.decompiledDir == "" {
 		args = append(args, "-postScript", "DecompileAll.java")
