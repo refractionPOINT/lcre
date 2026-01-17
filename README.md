@@ -10,6 +10,7 @@ LCRE is a CLI tool for static binary analysis and forensics automation. It provi
 - **Binary Diff**: Compare two binaries to identify changes
 - **Ghidra Integration**: Deep analysis with decompilation and call graph extraction
 - **Multiple Output Formats**: JSON and Markdown
+- **AI-Ready**: Machine-readable capabilities for AI assistant integration
 
 ## Installation
 
@@ -157,6 +158,21 @@ export GHIDRA_HOME=/path/to/ghidra
 lcre ghidra analyze sample.exe --timeout 10m
 lcre ghidra analyze sample.exe --decompile
 ```
+
+### AI Assistant Integration
+
+LCRE includes a `capabilities` command that outputs comprehensive JSON describing all commands, flags, and investigation workflows. This is designed for AI assistants like Claude Code to quickly understand what LCRE can do.
+
+```bash
+# Get full capabilities JSON
+lcre capabilities
+
+# Pipe to jq for specific info
+lcre capabilities | jq '.workflows'
+lcre capabilities | jq '.commands[] | select(.name == "query") | .subcommands'
+```
+
+See the [Claude Code Quick-Start Guide](docs/CLAUDE_CODE_GUIDE.md) for AI-assisted binary analysis workflows.
 
 ## Output Schema
 
