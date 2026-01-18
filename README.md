@@ -269,4 +269,4 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
 
 ## License
 
-MIT
+Apache License 2.0
