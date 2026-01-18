@@ -262,36 +262,136 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
 
 ## Heuristic Rules
 
+LCRE includes a comprehensive set of heuristic rules for detecting malware indicators. Each rule produces a severity-weighted score that contributes to the overall risk assessment.
+
+### Rule Summary
+
 | ID | Name | Category | Severity | Description |
 |----|------|----------|----------|-------------|
-| PACKER001 | Packer Sections | packer | Medium | UPX, ASPack, MPRESS, VMProtect section names |
-| PACKER002 | High Entropy | packer | Medium | Sections with entropy > 7.0 |
-| IMPORT001 | Process Injection | injection | High | CreateRemoteThread, WriteProcessMemory, etc. |
-| IMPORT002 | Anti-Debug | anti-debug | Medium | IsDebuggerPresent, CheckRemoteDebuggerPresent |
-| IMPORT003 | Persistence | persistence | High | RegSetValueEx, CreateService |
-| IMPORT004 | Crypto APIs | crypto | Low | CryptEncrypt, CryptGenKey |
-| IMPORT005 | Minimal Imports | packer | Medium | < 5 imports suggests packing |
-| IMPORT006 | Low-Level Disk Access | evasion | High | PhysicalDrive access (bootkit indicator) |
-| STRING001 | Network IOCs | network | Medium | URLs, IPs, domains in strings |
-| STRING002 | Suspicious Paths | evasion | Medium | /proc, Run keys, temp paths |
+| PACKER001 | Packer Sections | packer | Medium | Known packer section names |
+| PACKER002 | High Entropy | packer | Medium | Encrypted/compressed sections |
+| IMPORT001 | Process Injection | injection | High | Code injection APIs |
+| IMPORT002 | Anti-Debug | anti-debug | Medium | Debugger detection APIs |
+| IMPORT003 | Persistence | persistence | High | System persistence APIs |
+| IMPORT004 | Crypto APIs | crypto | Low | Encryption APIs |
+| IMPORT005 | Minimal Imports | packer | Medium | Suspiciously few imports |
+| IMPORT006 | Low-Level Disk Access | evasion | High | Raw disk/MBR access |
+| STRING001 | Network IOCs | network | Medium | URLs, IPs, domains |
+| STRING002 | Suspicious Paths | evasion | Medium | Sensitive system paths |
 | STRING003 | Suspicious Strings | anomaly | High | Ransomware/malware indicators |
-| SECTION001 | Tiny Text | anomaly | Medium | Small .text with large high-entropy sections |
-| ANOMALY001 | Entry Point Anomaly | anomaly | Medium | Entry point outside .text section |
-| ANOMALY002 | RWX Section | anomaly | High | Read-Write-Execute permissions |
-| ANOMALY003 | Timestamp Anomaly | anomaly | Low | Suspicious PE timestamps |
-| ANOMALY004 | Section Count Anomaly | anomaly | Low | Unusual number of sections |
-| ANOMALY005 | Metadata Mismatch | evasion | Medium | Unsigned binary claiming trusted vendor |
-| YARA001 | YARA Signature Match | anomaly | Critical | Matches known malware YARA signatures |
-| YARA002 | Malware Family Patterns | anomaly | High | Matches patterns of known malware families |
+| SECTION001 | Tiny Text | anomaly | Medium | Anomalous section sizes |
+| ANOMALY001 | Entry Point Anomaly | anomaly | Medium | Unusual entry point location |
+| ANOMALY002 | RWX Section | anomaly | High | Self-modifying code indicator |
+| ANOMALY003 | Timestamp Anomaly | anomaly | Low | Suspicious compile times |
+| ANOMALY004 | Section Count Anomaly | anomaly | Low | Unusual structure |
+| ANOMALY005 | Metadata Mismatch | evasion | Medium | Vendor impersonation |
+| YARA001 | YARA Signature Match | anomaly | Critical | Known malware signatures |
+| YARA002 | Malware Family Patterns | anomaly | High | Malware family patterns |
 
-### YARA Malware Families
+### Packer Detection
 
-Embedded YARA rules cover the following malware families:
+**PACKER001 - Packer Sections**: Detects known packer/protector section names including:
+- UPX: `UPX0`, `UPX1`, `UPX2`, `.upx`
+- ASPack: `.aspack`, `.adata`
+- VMProtect: `.vmp0`, `.vmp1`, `.vmp2`
+- Themida: `.themida`
+- Enigma: `.enigma1`, `.enigma2`
+- PECompact: `.pec`, `.pec1`, `.pec2`
+- And others: MPRESS, NsPack, Petite, SVK Protector
+
+**PACKER002 - High Entropy**: Flags sections with Shannon entropy > 7.0 (max is 8.0), indicating encrypted or compressed data. Legitimate code typically has entropy between 5.0-6.5.
+
+**IMPORT005 - Minimal Imports**: Detects PE binaries with fewer than 5 imports, or binaries where all imports are basic loader functions (`LoadLibrary`, `GetProcAddress`, `VirtualAlloc`). This is a strong indicator of packed executables that resolve their real imports at runtime.
+
+### Suspicious Import Detection
+
+**IMPORT001 - Process Injection**: Detects APIs used for injecting code into other processes:
+- `CreateRemoteThread`, `WriteProcessMemory`, `VirtualAllocEx`
+- `NtCreateThreadEx`, `RtlCreateUserThread`, `QueueUserAPC`
+- `NtMapViewOfSection`, `NtUnmapViewOfSection`, `SetThreadContext`
+
+**IMPORT002 - Anti-Debug**: Detects APIs used to detect or evade debuggers:
+- `IsDebuggerPresent`, `CheckRemoteDebuggerPresent`
+- `NtQueryInformationProcess`, `NtSetInformationThread`
+- `OutputDebugString`, `GetTickCount`, `QueryPerformanceCounter`
+
+**IMPORT003 - Persistence**: Detects APIs used for establishing persistence:
+- Registry: `RegSetValueEx`, `RegCreateKeyEx`, `SHSetValue`
+- Services: `CreateService`, `ChangeServiceConfig`, `StartService`
+- Scheduled tasks: `CreateScheduledTask`
+
+**IMPORT004 - Crypto APIs**: Detects Windows cryptographic APIs that may indicate ransomware:
+- CryptoAPI: `CryptEncrypt`, `CryptDecrypt`, `CryptGenKey`, `CryptAcquireContext`
+- CNG: `BCryptEncrypt`, `BCryptDecrypt`, `BCryptGenerateSymmetricKey`
+
+**IMPORT006 - Low-Level Disk Access**: Detects APIs for raw disk access (bootkit/MBR malware indicator):
+- File APIs combined with `DeviceIoControl`
+- Strings containing `\\.\PhysicalDrive`, `\\.\HardDisk`
+- This is how malware like Petya accesses the MBR
+
+### String-Based Detection
+
+**STRING001 - Network IOCs**: Extracts and flags URLs, IP addresses, and domain names found in binary strings. Excludes common whitelisted domains (microsoft.com, google.com, etc.).
+
+**STRING002 - Suspicious Paths**: Detects references to sensitive system paths:
+- Linux: `/proc/`, `/etc/passwd`, `/etc/shadow`
+- Windows: `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`, `\AppData\`, `\Temp\`
+- macOS: `/Library/LaunchAgents`, `/Library/LaunchDaemons`
+
+**STRING003 - Suspicious Strings**: Detects strings commonly found in ransomware and malware (requires 2+ matches to trigger):
+- Ransomware: "your files have been encrypted", "bitcoin", "decrypt", ".onion", "tor browser"
+- Malware: "keylogger", "screenshot", "clipboard", "credential", "inject", "payload", "c2", "botnet"
+
+### PE Anomaly Detection
+
+**SECTION001 - Tiny Text**: Flags binaries with anomalously small `.text` sections (< 1KB) combined with large high-entropy sections (> 10KB). This pattern indicates the real code is packed elsewhere.
+
+**ANOMALY001 - Entry Point Anomaly**: Detects entry points outside standard code sections. Normal executables have entry points in `.text` or `CODE` sections. Entry points in unusual sections suggest packing or tampering.
+
+**ANOMALY002 - RWX Section**: Detects sections with Read-Write-Execute permissions. Legitimate software rarely needs RWX sections; this is common in:
+- Packed executables (unpacker needs to write then execute)
+- Shellcode and exploits
+- Self-modifying code
+
+**ANOMALY003 - Timestamp Anomaly**: Detects suspicious PE timestamps:
+- Null timestamp (stripped)
+- Future timestamps
+- Very old timestamps (before 1995)
+- Known fake timestamps (e.g., Delphi default: 0x2A425E19)
+
+**ANOMALY004 - Section Count Anomaly**: Flags binaries with unusual section counts:
+- Only 1 section (unusual for legitimate PE)
+- More than 15 sections (may indicate tampering)
+
+**ANOMALY005 - Metadata Mismatch**: Detects binaries that claim to be from trusted vendors (Microsoft, IBM, Adobe, Google, etc.) but are unsigned. This catches malware that impersonates legitimate software through version info strings.
+
+### YARA Integration
+
+**YARA001 - YARA Signature Match**: Runs the `yara` command-line tool against embedded signature rules. Requires YARA to be installed (`apt install yara` or `brew install yara`). Covers:
 - **Ransomware**: Locky, Petya, NotPetya, WannaCry, Ryuk
 - **APT**: Stuxnet, Duqu, Flame
 - **Trojans**: Emotet, Trickbot, AgentTesla
 - **Red Team Tools**: Cobalt Strike, Metasploit
 - **Packers**: UPX, VMProtect, Themida, ASPack
+- **Evasion**: Anti-VM/sandbox techniques
+
+**YARA002 - Malware Family Patterns**: Lightweight pattern matching that works without the YARA binary. Searches for known malware family strings in the binary (e.g., ".locky", "PETYA", "WannaCry", "MRXCLS.SYS"). Requires 2+ pattern matches per family to reduce false positives.
+
+### Risk Scoring
+
+Each rule has a severity that contributes points to the total score:
+- **Info**: 1 point
+- **Low**: 5 points
+- **Medium**: 15 points
+- **High**: 30 points
+- **Critical**: 50 points
+
+Risk levels are determined by total score:
+- **Info**: 0-10 points
+- **Low**: 10-25 points
+- **Medium**: 25-50 points
+- **High**: 50-100 points
+- **Critical**: 100+ points
 
 ## Exit Codes
 
