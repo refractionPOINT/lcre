@@ -262,6 +262,17 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
 - `1`: Error
 - `2`: Partial success (some analysis failed)
 
+## Dependencies
+
+LCRE uses the following external Go packages:
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| [github.com/spf13/cobra](https://github.com/spf13/cobra) | v1.8.0 | CLI framework for command structure, flags, and help text |
+| [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | v1.44.1 | Pure Go SQLite driver for caching analysis results |
+
+All other functionality uses Go standard library packages including `debug/pe`, `debug/elf`, and `debug/macho` for binary parsing.
+
 ## Environment Variables
 
 - `GHIDRA_HOME`: Path to Ghidra installation
