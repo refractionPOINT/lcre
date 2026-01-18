@@ -80,33 +80,44 @@ func (w *MarkdownWriter) Write(writer io.Writer, result *model.AnalysisResult) e
 		sb.WriteString("\n")
 	}
 
-	// Heuristics
-	if result.Heuristics != nil && result.Heuristics.HasMatches() {
-		sb.WriteString("## Heuristic Analysis\n\n")
-		sb.WriteString(fmt.Sprintf("**Risk Level:** %s (Score: %d)\n\n",
-			strings.ToUpper(string(result.Heuristics.RiskLevel)), result.Heuristics.TotalScore))
+	// YARA matches
+	if result.YARA != nil && len(result.YARA.Matches) > 0 {
+		sb.WriteString("## YARA Matches\n\n")
+		sb.WriteString(fmt.Sprintf("**Matches:** %d\n\n", len(result.YARA.Matches)))
 
-		sb.WriteString("| Rule ID | Name | Severity | Category |\n")
-		sb.WriteString("|---------|------|----------|----------|\n")
-		for _, match := range result.Heuristics.Matches {
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
-				match.RuleID, match.Name, match.Severity, match.Category))
+		sb.WriteString("| Rule | Tags | Matched Strings |\n")
+		sb.WriteString("|------|------|----------------|\n")
+		for _, match := range result.YARA.Matches {
+			tags := "-"
+			if len(match.Tags) > 0 {
+				tags = strings.Join(match.Tags, ", ")
+			}
+			strCount := len(match.Strings)
+			sb.WriteString(fmt.Sprintf("| %s | %s | %d |\n", match.Rule, tags, strCount))
 		}
 		sb.WriteString("\n")
 
-		// Details for each match
-		sb.WriteString("### Details\n\n")
-		for _, match := range result.Heuristics.Matches {
-			sb.WriteString(fmt.Sprintf("#### %s: %s\n\n", match.RuleID, match.Name))
-			sb.WriteString(fmt.Sprintf("%s\n\n", match.Description))
-			if len(match.Evidence) > 0 {
-				sb.WriteString("**Evidence:**\n")
-				for _, ev := range match.Evidence {
-					sb.WriteString(fmt.Sprintf("- `%s`\n", ev))
+		// Details for each match with strings
+		for _, match := range result.YARA.Matches {
+			if len(match.Strings) > 0 {
+				sb.WriteString(fmt.Sprintf("### %s\n\n", match.Rule))
+				sb.WriteString("**Matched strings:**\n")
+				maxStrings := 10
+				if len(match.Strings) < maxStrings {
+					maxStrings = len(match.Strings)
+				}
+				for i := 0; i < maxStrings; i++ {
+					sb.WriteString(fmt.Sprintf("- `%s`\n", match.Strings[i]))
+				}
+				if len(match.Strings) > 10 {
+					sb.WriteString(fmt.Sprintf("- ... and %d more\n", len(match.Strings)-10))
 				}
 				sb.WriteString("\n")
 			}
 		}
+	} else if result.YARA != nil && !result.YARA.Available {
+		sb.WriteString("## YARA\n\n")
+		sb.WriteString("_YARA scanner not available_\n\n")
 	}
 
 	// Strings (truncated)

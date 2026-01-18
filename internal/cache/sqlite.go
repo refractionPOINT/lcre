@@ -673,8 +673,8 @@ func (d *DB) QueryIOCs(iocType string) ([]model.IOC, error) {
 	return results, rows.Err()
 }
 
-// InsertHeuristics inserts heuristic matches in bulk.
-func (d *DB) InsertHeuristics(matches []model.HeuristicMatch) error {
+// InsertYARAMatches inserts YARA matches in bulk.
+func (d *DB) InsertYARAMatches(matches []YARAMatch) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -682,16 +682,17 @@ func (d *DB) InsertHeuristics(matches []model.HeuristicMatch) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(
-		"INSERT INTO heuristics (rule_id, name, description, severity, category, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+		"INSERT INTO yara_matches (rule, namespace, tags, description, strings) VALUES (?, ?, ?, ?, ?)",
 	)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	for _, h := range matches {
-		evidence, _ := json.Marshal(h.Evidence)
-		_, err := stmt.Exec(h.RuleID, h.Name, h.Description, string(h.Severity), string(h.Category), string(evidence))
+	for _, m := range matches {
+		tags, _ := json.Marshal(m.Tags)
+		strs, _ := json.Marshal(m.Strings)
+		_, err := stmt.Exec(m.Rule, m.Namespace, string(tags), m.Description, string(strs))
 		if err != nil {
 			return err
 		}
@@ -700,37 +701,47 @@ func (d *DB) InsertHeuristics(matches []model.HeuristicMatch) error {
 	return tx.Commit()
 }
 
-// QueryHeuristics returns heuristic matches filtered by category.
-func (d *DB) QueryHeuristics(category string) ([]model.HeuristicMatch, error) {
+// YARAMatch represents a YARA rule match for storage.
+type YARAMatch struct {
+	Rule        string   `json:"rule"`
+	Namespace   string   `json:"namespace,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Strings     []string `json:"strings,omitempty"`
+}
+
+// QueryYARAMatches returns YARA matches filtered by rule name.
+func (d *DB) QueryYARAMatches(ruleName string) ([]YARAMatch, error) {
 	var rows *sql.Rows
 	var err error
 
-	if category != "" {
+	if ruleName != "" {
 		rows, err = d.db.Query(
-			"SELECT rule_id, name, description, severity, category, evidence FROM heuristics WHERE category = ? ORDER BY severity DESC, rule_id",
-			category,
+			"SELECT rule, namespace, tags, description, strings FROM yara_matches WHERE rule LIKE ? ORDER BY rule",
+			"%"+ruleName+"%",
 		)
 	} else {
-		rows, err = d.db.Query("SELECT rule_id, name, description, severity, category, evidence FROM heuristics ORDER BY severity DESC, rule_id")
+		rows, err = d.db.Query("SELECT rule, namespace, tags, description, strings FROM yara_matches ORDER BY rule")
 	}
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var results []model.HeuristicMatch
+	var results []YARAMatch
 	for rows.Next() {
-		var h model.HeuristicMatch
-		var severity, cat, evidence string
-		if err := rows.Scan(&h.RuleID, &h.Name, &h.Description, &severity, &cat, &evidence); err != nil {
+		var m YARAMatch
+		var tags, strs string
+		if err := rows.Scan(&m.Rule, &m.Namespace, &tags, &m.Description, &strs); err != nil {
 			return nil, err
 		}
-		h.Severity = model.Severity(severity)
-		h.Category = model.Category(cat)
-		if evidence != "" {
-			json.Unmarshal([]byte(evidence), &h.Evidence)
+		if tags != "" {
+			json.Unmarshal([]byte(tags), &m.Tags)
 		}
-		results = append(results, h)
+		if strs != "" {
+			json.Unmarshal([]byte(strs), &m.Strings)
+		}
+		results = append(results, m)
 	}
 
 	return results, rows.Err()

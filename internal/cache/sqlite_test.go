@@ -816,80 +816,75 @@ func TestDB_InsertAndQueryIOCs(t *testing.T) {
 	})
 }
 
-func TestDB_InsertAndQueryHeuristics(t *testing.T) {
+func TestDB_InsertAndQueryYARAMatches(t *testing.T) {
 	db := createTestDB(t)
 	defer db.Close()
 
-	matches := []model.HeuristicMatch{
+	matches := []YARAMatch{
 		{
-			RuleID:      "PACKED_01",
-			Name:        "Packed Binary",
-			Description: "Binary appears to be packed",
-			Severity:    model.SeverityHigh,
-			Category:    model.CategoryPacker,
-			Evidence:    []string{"high entropy", "suspicious sections"},
+			Rule:        "Malware_Packed",
+			Namespace:   "default",
+			Tags:        []string{"malware", "packed"},
+			Description: "Detects packed malware",
+			Strings:     []string{"$s1: UPX0", "$s2: UPX1"},
 		},
 		{
-			RuleID:      "ANTIDEBUG_01",
-			Name:        "Anti-Debug Detected",
-			Description: "Uses anti-debugging techniques",
-			Severity:    model.SeverityMedium,
-			Category:    model.CategoryAntiDebug,
-			Evidence:    []string{"IsDebuggerPresent"},
+			Rule:        "Suspicious_PE",
+			Namespace:   "default",
+			Tags:        []string{"suspicious"},
+			Description: "Suspicious PE characteristics",
+			Strings:     []string{"$a: MZ"},
 		},
 		{
-			RuleID:      "PACKED_02",
-			Name:        "UPX Detected",
-			Description: "UPX packer detected",
-			Severity:    model.SeverityLow,
-			Category:    model.CategoryPacker,
-			Evidence:    []string{"UPX0", "UPX1"},
+			Rule:        "Clean_Signature",
+			Namespace:   "clean",
+			Tags:        nil,
+			Description: "Known clean signature",
+			Strings:     nil,
 		},
 	}
 
-	if err := db.InsertHeuristics(matches); err != nil {
-		t.Fatalf("InsertHeuristics() error = %v", err)
+	if err := db.InsertYARAMatches(matches); err != nil {
+		t.Fatalf("InsertYARAMatches() error = %v", err)
 	}
 
 	t.Run("query all", func(t *testing.T) {
-		results, err := db.QueryHeuristics("")
+		results, err := db.QueryYARAMatches("")
 		if err != nil {
-			t.Fatalf("QueryHeuristics() error = %v", err)
+			t.Fatalf("QueryYARAMatches() error = %v", err)
 		}
 		if len(results) != 3 {
-			t.Errorf("QueryHeuristics() returned %d results, want 3", len(results))
+			t.Errorf("QueryYARAMatches() returned %d results, want 3", len(results))
 		}
-		// Verify evidence was preserved
-		foundEvidence := false
+		// Verify tags were preserved
+		foundTags := false
 		for _, r := range results {
-			if len(r.Evidence) > 0 {
-				foundEvidence = true
+			if len(r.Tags) > 0 {
+				foundTags = true
 			}
 		}
-		if !foundEvidence {
-			t.Error("QueryHeuristics() did not preserve evidence")
+		if !foundTags {
+			t.Error("QueryYARAMatches() did not preserve tags")
 		}
 	})
 
-	t.Run("filter by category", func(t *testing.T) {
-		results, err := db.QueryHeuristics("packer")
+	t.Run("filter by rule name", func(t *testing.T) {
+		results, err := db.QueryYARAMatches("Packed")
 		if err != nil {
-			t.Fatalf("QueryHeuristics() error = %v", err)
+			t.Fatalf("QueryYARAMatches() error = %v", err)
 		}
-		if len(results) != 2 {
-			t.Errorf("QueryHeuristics() returned %d results, want 2", len(results))
+		if len(results) != 1 {
+			t.Errorf("QueryYARAMatches() returned %d results, want 1", len(results))
 		}
 	})
 
-	t.Run("sorted by severity descending", func(t *testing.T) {
-		results, err := db.QueryHeuristics("")
+	t.Run("sorted by rule name", func(t *testing.T) {
+		results, err := db.QueryYARAMatches("")
 		if err != nil {
-			t.Fatalf("QueryHeuristics() error = %v", err)
+			t.Fatalf("QueryYARAMatches() error = %v", err)
 		}
-		// Sorted by severity DESC (alphabetically), so order is: medium, low, high
-		// This is the actual SQL behavior with string sorting
 		if len(results) != 3 {
-			t.Errorf("QueryHeuristics() returned %d results, want 3", len(results))
+			t.Errorf("QueryYARAMatches() returned %d results, want 3", len(results))
 		}
 	})
 }

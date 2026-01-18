@@ -9,10 +9,10 @@ import (
 
 	"github.com/maxime/lcre/internal/backend"
 	_ "github.com/maxime/lcre/internal/backend/native"
-	"github.com/maxime/lcre/internal/heuristics"
 	"github.com/maxime/lcre/internal/ioc"
 	"github.com/maxime/lcre/internal/model"
 	"github.com/maxime/lcre/internal/output"
+	"github.com/maxime/lcre/internal/yara"
 )
 
 // FullReport contains all analysis results
@@ -29,7 +29,7 @@ var reportCmd = &cobra.Command{
 - Section analysis with entropy
 - Import/export tables
 - Extracted strings
-- Heuristic analysis
+- YARA scan results
 - IOC extraction`,
 	Args: cobra.ExactArgs(1),
 	RunE: runReport,
@@ -71,11 +71,17 @@ func runReport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
 
-	// Run heuristics
+	// Run YARA scan
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Running heuristic analysis...\n")
+		fmt.Fprintf(os.Stderr, "Running YARA scan...\n")
 	}
-	result.Heuristics = heuristics.DefaultEngine.Analyze(ctx, result)
+	scanner := yara.NewScanner()
+	yaraResult, scanErr := scanner.Scan(ctx, binaryPath)
+	if scanErr != nil {
+		result.AddError(fmt.Sprintf("YARA scan failed: %v", scanErr))
+	} else {
+		result.YARA = yaraResult
+	}
 
 	// Extract IOCs
 	if verbose {

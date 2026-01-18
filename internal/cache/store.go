@@ -72,9 +72,19 @@ func StoreAnalysisResult(mgr *Manager, binaryPath string, result *model.Analysis
 		}
 	}
 
-	// Store heuristics
-	if result.Heuristics != nil && len(result.Heuristics.Matches) > 0 {
-		if err := db.InsertHeuristics(result.Heuristics.Matches); err != nil {
+	// Store YARA matches
+	if result.YARA != nil && len(result.YARA.Matches) > 0 {
+		yaraMatches := make([]YARAMatch, 0, len(result.YARA.Matches))
+		for _, m := range result.YARA.Matches {
+			yaraMatches = append(yaraMatches, YARAMatch{
+				Rule:        m.Rule,
+				Namespace:   m.Namespace,
+				Tags:        m.Tags,
+				Description: m.Description,
+				Strings:     m.Strings,
+			})
+		}
+		if err := db.InsertYARAMatches(yaraMatches); err != nil {
 			return err
 		}
 	}
@@ -94,9 +104,9 @@ func StoreAnalysisResult(mgr *Manager, binaryPath string, result *model.Analysis
 		return err
 	}
 
-	// Store heuristics result as JSON (includes score and risk level)
-	if result.Heuristics != nil {
-		if err := db.StoreMetadataJSON("heuristics_result", result.Heuristics); err != nil {
+	// Store YARA result as JSON
+	if result.YARA != nil {
+		if err := db.StoreMetadataJSON("yara_result", result.YARA); err != nil {
 			return err
 		}
 	}
@@ -112,14 +122,10 @@ func StoreAnalysisResult(mgr *Manager, binaryPath string, result *model.Analysis
 	stringCount := len(result.Strings)
 	importCount := len(result.Imports)
 	exportCount := len(result.Exports)
-	heuristicCount := 0
-	riskLevel := "info"
-	totalScore := 0
+	yaraMatchCount := 0
 
-	if result.Heuristics != nil {
-		heuristicCount = len(result.Heuristics.Matches)
-		riskLevel = string(result.Heuristics.RiskLevel)
-		totalScore = result.Heuristics.TotalScore
+	if result.YARA != nil {
+		yaraMatchCount = len(result.YARA.Matches)
 	}
 
 	// Determine if this was a deep analysis (has functions/callgraph)
@@ -142,9 +148,7 @@ func StoreAnalysisResult(mgr *Manager, binaryPath string, result *model.Analysis
 		FunctionCount:  functionCount,
 		ImportCount:    importCount,
 		ExportCount:    exportCount,
-		HeuristicCount: heuristicCount,
-		RiskLevel:      riskLevel,
-		TotalScore:     totalScore,
+		YARAMatchCount: yaraMatchCount,
 	}
 
 	return mgr.SaveMetadata(binaryPath, meta)

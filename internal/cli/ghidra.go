@@ -10,8 +10,8 @@ import (
 
 	"github.com/maxime/lcre/internal/backend"
 	"github.com/maxime/lcre/internal/backend/ghidra"
-	"github.com/maxime/lcre/internal/heuristics"
 	"github.com/maxime/lcre/internal/output"
+	"github.com/maxime/lcre/internal/yara"
 )
 
 var (
@@ -106,8 +106,14 @@ func runGhidraAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Ghidra analysis failed: %w", err)
 	}
 
-	// Run heuristics
-	result.Heuristics = heuristics.DefaultEngine.Analyze(ctx, result)
+	// Run YARA scan
+	scanner := yara.NewScanner()
+	yaraResult, err := scanner.Scan(ctx, binaryPath)
+	if err != nil {
+		result.AddError(fmt.Sprintf("YARA scan failed: %v", err))
+	} else {
+		result.YARA = yaraResult
+	}
 
 	// Output results
 	switch outputFormat {

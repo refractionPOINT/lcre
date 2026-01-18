@@ -218,9 +218,7 @@ func TestManagerMetadata(t *testing.T) {
 		FunctionCount:  50,
 		ImportCount:    20,
 		ExportCount:    5,
-		HeuristicCount: 2,
-		RiskLevel:      "low",
-		TotalScore:     10,
+		YARAMatchCount: 2,
 	}
 
 	if err := mgr.SaveMetadata(testFile, meta); err != nil {

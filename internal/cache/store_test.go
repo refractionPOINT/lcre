@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/maxime/lcre/internal/model"
+	"github.com/maxime/lcre/internal/yara"
 )
 
 func createTestManagerAndBinary(t *testing.T) (*Manager, string) {
@@ -70,19 +71,17 @@ func TestStoreAnalysisResult(t *testing.T) {
 		EntryPoints: []model.EntryPoint{
 			{Name: "_start", Address: 0x500, Type: "main"},
 		},
-		Heuristics: &model.HeuristicsResult{
-			Matches: []model.HeuristicMatch{
+		YARA: &yara.ScanResult{
+			Matches: []yara.Match{
 				{
-					RuleID:      "TEST_01",
-					Name:        "Test Rule",
+					Rule:        "TEST_RULE",
+					Namespace:   "test",
+					Tags:        []string{"test"},
 					Description: "Test description",
-					Severity:    model.SeverityLow,
-					Category:    model.CategoryAnomaly,
-					Evidence:    []string{"evidence1"},
+					Strings:     []string{"$s1: test"},
 				},
 			},
-			TotalScore: 5,
-			RiskLevel:  model.SeverityLow,
+			Available: true,
 		},
 		Backend:   "native",
 		Duration:  1.5,
@@ -132,14 +131,11 @@ func TestStoreAnalysisResult(t *testing.T) {
 	if meta.ExportCount != 1 {
 		t.Errorf("ExportCount = %d, want 1", meta.ExportCount)
 	}
-	if meta.HeuristicCount != 1 {
-		t.Errorf("HeuristicCount = %d, want 1", meta.HeuristicCount)
+	if meta.YARAMatchCount != 1 {
+		t.Errorf("YARAMatchCount = %d, want 1", meta.YARAMatchCount)
 	}
 	if !meta.DeepAnalysis {
 		t.Error("DeepAnalysis = false, want true (has functions)")
-	}
-	if meta.TotalScore != 5 {
-		t.Errorf("TotalScore = %d, want 5", meta.TotalScore)
 	}
 
 	// Open database and verify data
@@ -212,13 +208,13 @@ func TestStoreAnalysisResult(t *testing.T) {
 		t.Errorf("EntryPoints count = %d, want 1", len(entryPoints))
 	}
 
-	// Verify heuristics
-	heuristics, err := db.QueryHeuristics("")
+	// Verify YARA matches
+	yaraMatches, err := db.QueryYARAMatches("")
 	if err != nil {
-		t.Fatalf("QueryHeuristics() error = %v", err)
+		t.Fatalf("QueryYARAMatches() error = %v", err)
 	}
-	if len(heuristics) != 1 {
-		t.Errorf("Heuristics count = %d, want 1", len(heuristics))
+	if len(yaraMatches) != 1 {
+		t.Errorf("YARA matches count = %d, want 1", len(yaraMatches))
 	}
 
 	// Verify IOCs

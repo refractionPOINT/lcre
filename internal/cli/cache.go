@@ -191,8 +191,7 @@ func runCacheInfo(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Functions: %d\n", meta.FunctionCount)
 		fmt.Printf("  Imports: %d\n", meta.ImportCount)
 		fmt.Printf("  Exports: %d\n", meta.ExportCount)
-		fmt.Printf("  Heuristics: %d\n", meta.HeuristicCount)
-		fmt.Printf("\nRisk: %s (score: %d)\n", meta.RiskLevel, meta.TotalScore)
+		fmt.Printf("  YARA Matches: %d\n", meta.YARAMatchCount)
 	}
 
 	return nil

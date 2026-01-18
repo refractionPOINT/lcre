@@ -27,7 +27,6 @@ type AnalysisOptions struct {
 	MinStringLength int
 	MaxStrings      int
 	DeepAnalysis    bool
-	IncludeHeuristics bool
 }
 
 // DefaultOptions returns default analysis options
@@ -38,7 +37,6 @@ func DefaultOptions() AnalysisOptions {
 		MinStringLength: 4,
 		MaxStrings:      10000,
 		DeepAnalysis:    false,
-		IncludeHeuristics: true,
 	}
 }
 

@@ -10,13 +10,13 @@ import (
 
 	"github.com/maxime/lcre/internal/backend"
 	_ "github.com/maxime/lcre/internal/backend/native" // Register native backend
-	"github.com/maxime/lcre/internal/heuristics"
 	"github.com/maxime/lcre/internal/output"
+	"github.com/maxime/lcre/internal/yara"
 )
 
 var (
 	triageStrings    bool
-	triageHeuristics bool
+	triageYARA       bool
 	triageMinStrLen  int
 	triageMaxStrings int
 )
@@ -31,14 +31,14 @@ This command provides quick triage information including:
 - Section information with entropy
 - Import/export tables
 - Extracted strings (optional)
-- Heuristic analysis (optional)`,
+- YARA scan results (optional)`,
 	Args: cobra.ExactArgs(1),
 	RunE: runTriage,
 }
 
 func init() {
 	triageCmd.Flags().BoolVar(&triageStrings, "strings", true, "Extract strings from binary")
-	triageCmd.Flags().BoolVar(&triageHeuristics, "heuristics", true, "Run heuristic analysis")
+	triageCmd.Flags().BoolVar(&triageYARA, "yara", true, "Run YARA scan")
 	triageCmd.Flags().IntVar(&triageMinStrLen, "min-string-len", 4, "Minimum string length to extract")
 	triageCmd.Flags().IntVar(&triageMaxStrings, "max-strings", 10000, "Maximum strings to extract")
 	rootCmd.AddCommand(triageCmd)
@@ -63,11 +63,10 @@ func runTriage(cmd *cobra.Command, args []string) error {
 
 	// Configure analysis options
 	opts := backend.AnalysisOptions{
-		Timeout:           timeout,
-		IncludeStrings:    triageStrings,
-		MinStringLength:   triageMinStrLen,
-		MaxStrings:        triageMaxStrings,
-		IncludeHeuristics: triageHeuristics,
+		Timeout:         timeout,
+		IncludeStrings:  triageStrings,
+		MinStringLength: triageMinStrLen,
+		MaxStrings:      triageMaxStrings,
 	}
 
 	// Run analysis
@@ -80,9 +79,15 @@ func runTriage(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
 
-	// Run heuristics if enabled
-	if triageHeuristics {
-		result.Heuristics = heuristics.DefaultEngine.Analyze(ctx, result)
+	// Run YARA scan if enabled
+	if triageYARA {
+		scanner := yara.NewScanner()
+		yaraResult, err := scanner.Scan(ctx, binaryPath)
+		if err != nil {
+			result.AddError(fmt.Sprintf("YARA scan failed: %v", err))
+		} else {
+			result.YARA = yaraResult
+		}
 	}
 
 	// Output results

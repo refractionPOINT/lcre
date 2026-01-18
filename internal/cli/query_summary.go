@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/maxime/lcre/internal/cache"
-	"github.com/maxime/lcre/internal/model"
 	"github.com/spf13/cobra"
 )
 
 var querySummaryCmd = &cobra.Command{
 	Use:   "summary <binary>",
 	Short: "Get analysis summary",
-	Long: `Get a summary of the binary analysis including metadata, risk level, and top findings.
+	Long: `Get a summary of the binary analysis including metadata and counts.
 First query triggers analysis, subsequent queries are instant.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runQuerySummary,
@@ -26,28 +26,24 @@ func init() {
 
 // SummaryOutput represents the JSON output for the summary command.
 type SummaryOutput struct {
-	Metadata      MetadataSummary   `json:"metadata"`
-	RiskLevel     string            `json:"risk_level"`
-	TotalScore    int               `json:"total_score"`
-	HeuristicCount int              `json:"heuristic_count"`
-	TopFindings   []FindingSummary  `json:"top_findings"`
-	Counts        CountSummary      `json:"counts"`
-	Cached        bool              `json:"cached"`
-	AnalysisTime  string            `json:"analysis_time,omitempty"`
+	Metadata       MetadataSummary  `json:"metadata"`
+	YARAMatchCount int              `json:"yara_match_count"`
+	YARAMatches    []YARASummary    `json:"yara_matches,omitempty"`
+	Counts         CountSummary     `json:"counts"`
+	Cached         bool             `json:"cached"`
+	AnalysisTime   string           `json:"analysis_time,omitempty"`
 }
 
 type MetadataSummary struct {
-	Format  string `json:"format"`
-	Arch    string `json:"arch"`
-	Size    int64  `json:"size"`
-	SHA256  string `json:"sha256"`
+	Format string `json:"format"`
+	Arch   string `json:"arch"`
+	Size   int64  `json:"size"`
+	SHA256 string `json:"sha256"`
 }
 
-type FindingSummary struct {
-	RuleID   string `json:"rule"`
-	Name     string `json:"name"`
-	Severity string `json:"severity"`
-	Category string `json:"category,omitempty"`
+type YARASummary struct {
+	Rule string   `json:"rule"`
+	Tags []string `json:"tags,omitempty"`
 }
 
 type CountSummary struct {
@@ -90,18 +86,16 @@ func runQuerySummary(cmd *cobra.Command, args []string) error {
 	functions, _ := db.QueryFunctions("", 0, 0)
 	iocs, _ := db.QueryIOCs("")
 
-	// Get top findings
-	heuristics, _ := db.QueryHeuristics("")
-	topFindings := make([]FindingSummary, 0)
-	for i, h := range heuristics {
+	// Get YARA matches
+	yaraMatches, _ := db.QueryYARAMatches("")
+	yaraSummaries := make([]YARASummary, 0)
+	for i, m := range yaraMatches {
 		if i >= 5 {
 			break
 		}
-		topFindings = append(topFindings, FindingSummary{
-			RuleID:   h.RuleID,
-			Name:     h.Name,
-			Severity: string(h.Severity),
-			Category: string(h.Category),
+		yaraSummaries = append(yaraSummaries, YARASummary{
+			Rule: m.Rule,
+			Tags: m.Tags,
 		})
 	}
 
@@ -112,10 +106,8 @@ func runQuerySummary(cmd *cobra.Command, args []string) error {
 			Size:   meta.Binary.Size,
 			SHA256: meta.Binary.SHA256,
 		},
-		RiskLevel:      meta.RiskLevel,
-		TotalScore:     meta.TotalScore,
-		HeuristicCount: len(heuristics),
-		TopFindings:    topFindings,
+		YARAMatchCount: len(yaraMatches),
+		YARAMatches:    yaraSummaries,
 		Counts: CountSummary{
 			Sections:  len(sections),
 			Imports:   len(imports),
@@ -145,22 +137,14 @@ func printSummaryMarkdown(s SummaryOutput, meta *cache.CachedMetadata) {
 	fmt.Printf("**Format:** %s | **Arch:** %s | **Size:** %s\n", s.Metadata.Format, s.Metadata.Arch, formatBytes(s.Metadata.Size))
 	fmt.Printf("**SHA256:** %s\n\n", s.Metadata.SHA256)
 
-	// Risk indicator
-	riskEmoji := "✅"
-	switch model.Severity(s.RiskLevel) {
-	case model.SeverityHigh, model.SeverityCritical:
-		riskEmoji = "🔴"
-	case model.SeverityMedium:
-		riskEmoji = "🟡"
-	case model.SeverityLow:
-		riskEmoji = "🟠"
-	}
-	fmt.Printf("## Risk Level: %s %s (score: %d)\n\n", riskEmoji, s.RiskLevel, s.TotalScore)
-
-	if len(s.TopFindings) > 0 {
-		fmt.Printf("## Top Findings\n")
-		for _, f := range s.TopFindings {
-			fmt.Printf("- **[%s]** %s (%s)\n", f.Severity, f.Name, f.RuleID)
+	if len(s.YARAMatches) > 0 {
+		fmt.Printf("## YARA Matches (%d)\n", s.YARAMatchCount)
+		for _, m := range s.YARAMatches {
+			if len(m.Tags) > 0 {
+				fmt.Printf("- %s [%s]\n", m.Rule, strings.Join(m.Tags, ", "))
+			} else {
+				fmt.Printf("- %s\n", m.Rule)
+			}
 		}
 		fmt.Println()
 	}

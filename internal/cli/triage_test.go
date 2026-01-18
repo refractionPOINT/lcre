@@ -57,12 +57,12 @@ func TestTriageFlags(t *testing.T) {
 		t.Errorf("--strings default = %q, want %q", stringsFlag.DefValue, "true")
 	}
 
-	heuristicsFlag := cmd.Flags().Lookup("heuristics")
-	if heuristicsFlag == nil {
-		t.Error("--heuristics flag not found")
+	yaraFlag := cmd.Flags().Lookup("yara")
+	if yaraFlag == nil {
+		t.Error("--yara flag not found")
 	}
-	if heuristicsFlag.DefValue != "true" {
-		t.Errorf("--heuristics default = %q, want %q", heuristicsFlag.DefValue, "true")
+	if yaraFlag.DefValue != "true" {
+		t.Errorf("--yara default = %q, want %q", yaraFlag.DefValue, "true")
 	}
 
 	minStrLenFlag := cmd.Flags().Lookup("min-string-len")
@@ -151,11 +151,11 @@ func TestNativeBackendWithOptions(t *testing.T) {
 		// Strings may or may not be included depending on implementation
 	})
 
-	t.Run("with heuristics enabled", func(t *testing.T) {
+	t.Run("with deep analysis", func(t *testing.T) {
 		opts := backend.AnalysisOptions{
-			Timeout:           30 * time.Second,
-			IncludeStrings:    true,
-			IncludeHeuristics: true,
+			Timeout:        30 * time.Second,
+			IncludeStrings: true,
+			DeepAnalysis:   true,
 		}
 
 		result, err := b.Analyze(ctx, binaryPath, opts)

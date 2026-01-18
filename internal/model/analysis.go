@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/maxime/lcre/internal/yara"
+)
 
 // AnalysisResult is the top-level output structure for binary analysis
 type AnalysisResult struct {
@@ -13,7 +17,7 @@ type AnalysisResult struct {
 	Functions   []Function        `json:"functions,omitempty"`
 	CallGraph   *CallGraph        `json:"call_graph,omitempty"`
 	EntryPoints []EntryPoint      `json:"entry_points,omitempty"`
-	Heuristics  *HeuristicsResult `json:"heuristics,omitempty"`
+	YARA        *yara.ScanResult  `json:"yara,omitempty"`
 	Backend     string            `json:"backend"`
 	Duration    float64           `json:"duration_seconds"`
 	Timestamp   time.Time         `json:"timestamp"`

@@ -116,19 +116,16 @@ CREATE TABLE IF NOT EXISTS iocs (
 CREATE INDEX IF NOT EXISTS idx_iocs_type ON iocs(type);
 CREATE INDEX IF NOT EXISTS idx_iocs_value ON iocs(value);
 
--- Heuristic matches
-CREATE TABLE IF NOT EXISTS heuristics (
+-- YARA matches
+CREATE TABLE IF NOT EXISTS yara_matches (
     id INTEGER PRIMARY KEY,
-    rule_id TEXT NOT NULL,
-    name TEXT NOT NULL,
+    rule TEXT NOT NULL,
+    namespace TEXT,
+    tags TEXT,
     description TEXT,
-    severity TEXT,
-    category TEXT,
-    evidence TEXT
+    strings TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_heuristics_rule ON heuristics(rule_id);
-CREATE INDEX IF NOT EXISTS idx_heuristics_severity ON heuristics(severity);
-CREATE INDEX IF NOT EXISTS idx_heuristics_category ON heuristics(category);
+CREATE INDEX IF NOT EXISTS idx_yara_rule ON yara_matches(rule);
 
 -- Entry points
 CREATE TABLE IF NOT EXISTS entry_points (

@@ -40,18 +40,16 @@ type CacheEntry struct {
 
 // CachedMetadata stores quick-access binary metadata.
 type CachedMetadata struct {
-	Entry       CacheEntry          `json:"entry"`
-	Binary      model.BinaryMetadata `json:"binary"`
-	Backend     string              `json:"backend"`
-	AnalysisTime float64            `json:"analysis_time_secs"`
-	DeepAnalysis bool               `json:"deep_analysis"`
-	StringCount int                 `json:"string_count"`
-	FunctionCount int               `json:"function_count"`
-	ImportCount int                 `json:"import_count"`
-	ExportCount int                 `json:"export_count"`
-	HeuristicCount int              `json:"heuristic_count"`
-	RiskLevel   string              `json:"risk_level"`
-	TotalScore  int                 `json:"total_score"`
+	Entry          CacheEntry           `json:"entry"`
+	Binary         model.BinaryMetadata `json:"binary"`
+	Backend        string               `json:"backend"`
+	AnalysisTime   float64              `json:"analysis_time_secs"`
+	DeepAnalysis   bool                 `json:"deep_analysis"`
+	StringCount    int                  `json:"string_count"`
+	FunctionCount  int                  `json:"function_count"`
+	ImportCount    int                  `json:"import_count"`
+	ExportCount    int                  `json:"export_count"`
+	YARAMatchCount int                  `json:"yara_match_count"`
 }
 
 // Manager handles cache directory operations.

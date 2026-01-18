@@ -10,9 +10,9 @@ import (
 
 	"github.com/maxime/lcre/internal/backend"
 	"github.com/maxime/lcre/internal/cache"
-	"github.com/maxime/lcre/internal/heuristics"
 	"github.com/maxime/lcre/internal/ioc"
 	"github.com/maxime/lcre/internal/model"
+	"github.com/maxime/lcre/internal/yara"
 	"github.com/spf13/cobra"
 )
 
@@ -114,7 +114,6 @@ func runAnalysis(ctx context.Context, mgr *cache.Manager, binaryPath string, dee
 	opts.Timeout = timeout
 	opts.IncludeStrings = true
 	opts.DeepAnalysis = deep
-	opts.IncludeHeuristics = true
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Analyzing %s with %s backend...\n", filepath.Base(binaryPath), b.Name())
@@ -126,10 +125,13 @@ func runAnalysis(ctx context.Context, mgr *cache.Manager, binaryPath string, dee
 		return fmt.Errorf("analysis failed: %w", err)
 	}
 
-	// Run heuristics if not already run
-	if result.Heuristics == nil || len(result.Heuristics.Matches) == 0 {
-		heuristicsResult := heuristics.DefaultEngine.Analyze(ctx, result)
-		result.Heuristics = heuristicsResult
+	// Run YARA scan
+	scanner := yara.NewScanner()
+	yaraResult, scanErr := scanner.Scan(ctx, binaryPath)
+	if scanErr != nil {
+		result.AddError(fmt.Sprintf("YARA scan failed: %v", scanErr))
+	} else {
+		result.YARA = yaraResult
 	}
 
 	// Extract IOCs

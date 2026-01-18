@@ -104,7 +104,6 @@ func TestCapabilitiesQuerySubcommands(t *testing.T) {
 	// Check for expected query subcommands
 	expectedSubcommands := []string{
 		"query summary",
-		"query heuristics",
 		"query imports",
 		"query exports",
 		"query sections",

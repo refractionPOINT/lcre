@@ -9,6 +9,7 @@ import (
 
 	"github.com/maxime/lcre/internal/cache"
 	"github.com/maxime/lcre/internal/model"
+	"github.com/maxime/lcre/internal/yara"
 )
 
 func TestFormatAddress(t *testing.T) {
@@ -146,18 +147,17 @@ func setupTestCache(t *testing.T) (*cache.Manager, string) {
 		EntryPoints: []model.EntryPoint{
 			{Name: "_start", Address: 0x500, Type: "main"},
 		},
-		Heuristics: &model.HeuristicsResult{
-			Matches: []model.HeuristicMatch{
+		YARA: &yara.ScanResult{
+			Matches: []yara.Match{
 				{
-					RuleID:      "TEST_01",
-					Name:        "Test Heuristic",
+					Rule:        "Test_Rule",
+					Namespace:   "test",
+					Tags:        []string{"test"},
 					Description: "Test description",
-					Severity:    model.SeverityLow,
-					Category:    model.CategoryAnomaly,
+					Strings:     []string{"$s1: test"},
 				},
 			},
-			TotalScore: 5,
-			RiskLevel:  model.SeverityLow,
+			Available: true,
 		},
 		Backend:   "native",
 		Duration:  0.5,
@@ -525,7 +525,7 @@ func TestQueryIOCs_WithCache(t *testing.T) {
 	})
 }
 
-func TestQueryHeuristics_WithCache(t *testing.T) {
+func TestQueryYARAMatches_WithCache(t *testing.T) {
 	mgr, binaryPath := setupTestCache(t)
 
 	db, err := mgr.Open(binaryPath)
@@ -534,12 +534,12 @@ func TestQueryHeuristics_WithCache(t *testing.T) {
 	}
 	defer db.Close()
 
-	heuristics, err := db.QueryHeuristics("")
+	yaraMatches, err := db.QueryYARAMatches("")
 	if err != nil {
-		t.Fatalf("QueryHeuristics() error = %v", err)
+		t.Fatalf("QueryYARAMatches() error = %v", err)
 	}
-	if len(heuristics) != 1 {
-		t.Errorf("Heuristics count = %d, want 1", len(heuristics))
+	if len(yaraMatches) != 1 {
+		t.Errorf("YARA matches count = %d, want 1", len(yaraMatches))
 	}
 }
 
@@ -605,17 +605,11 @@ func TestCacheMetadata_WithCache(t *testing.T) {
 	if meta.ExportCount != 1 {
 		t.Errorf("ExportCount = %d, want 1", meta.ExportCount)
 	}
-	if meta.HeuristicCount != 1 {
-		t.Errorf("HeuristicCount = %d, want 1", meta.HeuristicCount)
+	if meta.YARAMatchCount != 1 {
+		t.Errorf("YARAMatchCount = %d, want 1", meta.YARAMatchCount)
 	}
 	if !meta.DeepAnalysis {
 		t.Error("DeepAnalysis = false, want true")
-	}
-	if meta.TotalScore != 5 {
-		t.Errorf("TotalScore = %d, want 5", meta.TotalScore)
-	}
-	if meta.RiskLevel != "low" {
-		t.Errorf("RiskLevel = %q, want %q", meta.RiskLevel, "low")
 	}
 }
 
@@ -856,11 +850,9 @@ func TestSummaryOutput_Structure(t *testing.T) {
 			Size:   12345,
 			SHA256: "abc123",
 		},
-		RiskLevel:      "low",
-		TotalScore:     10,
-		HeuristicCount: 2,
-		TopFindings: []FindingSummary{
-			{RuleID: "TEST_01", Name: "Test Finding", Severity: "low", Category: "anomaly"},
+		YARAMatchCount: 2,
+		YARAMatches: []YARASummary{
+			{Rule: "Test_Rule", Tags: []string{"test"}},
 		},
 		Counts: CountSummary{
 			Sections:  5,
@@ -878,14 +870,14 @@ func TestSummaryOutput_Structure(t *testing.T) {
 	if output.Metadata.Format != "elf" {
 		t.Errorf("Metadata.Format = %q, want %q", output.Metadata.Format, "elf")
 	}
-	if output.RiskLevel != "low" {
-		t.Errorf("RiskLevel = %q, want %q", output.RiskLevel, "low")
+	if output.YARAMatchCount != 2 {
+		t.Errorf("YARAMatchCount = %d, want 2", output.YARAMatchCount)
 	}
 	if output.Counts.Sections != 5 {
 		t.Errorf("Counts.Sections = %d, want 5", output.Counts.Sections)
 	}
-	if len(output.TopFindings) != 1 {
-		t.Errorf("TopFindings length = %d, want 1", len(output.TopFindings))
+	if len(output.YARAMatches) != 1 {
+		t.Errorf("YARAMatches length = %d, want 1", len(output.YARAMatches))
 	}
 }
 
@@ -1276,11 +1268,9 @@ func TestPrintSummaryMarkdown(t *testing.T) {
 			Size:   12345,
 			SHA256: "abc123def456",
 		},
-		RiskLevel:      "high",
-		TotalScore:     75,
-		HeuristicCount: 3,
-		TopFindings: []FindingSummary{
-			{RuleID: "PACKED_01", Name: "Packed Binary", Severity: "high", Category: "packer"},
+		YARAMatchCount: 3,
+		YARAMatches: []YARASummary{
+			{Rule: "Malware_Packed", Tags: []string{"malware", "packed"}},
 		},
 		Counts: CountSummary{
 			Sections:  5,
@@ -1316,12 +1306,6 @@ func TestPrintSummaryMarkdown(t *testing.T) {
 
 	if !contains(result, "Binary Summary") {
 		t.Error("printSummaryMarkdown() should include header")
-	}
-	if !contains(result, "Risk Level") {
-		t.Error("printSummaryMarkdown() should include risk level")
-	}
-	if !contains(result, "Top Findings") {
-		t.Error("printSummaryMarkdown() should include top findings")
 	}
 	if !contains(result, "Counts") {
 		t.Error("printSummaryMarkdown() should include counts")
@@ -1380,18 +1364,16 @@ func TestCountSummary_Structure(t *testing.T) {
 	}
 }
 
-func TestFindingSummary_Structure(t *testing.T) {
-	finding := FindingSummary{
-		RuleID:   "SUSPICIOUS_01",
-		Name:     "Suspicious API Call",
-		Severity: "high",
-		Category: "suspicious",
+func TestYARASummary_Structure(t *testing.T) {
+	summary := YARASummary{
+		Rule: "Malware_Test",
+		Tags: []string{"malware", "test"},
 	}
 
-	if finding.RuleID == "" {
-		t.Error("RuleID should not be empty")
+	if summary.Rule == "" {
+		t.Error("Rule should not be empty")
 	}
-	if finding.Severity != "high" {
-		t.Errorf("Severity = %q, want %q", finding.Severity, "high")
+	if len(summary.Tags) != 2 {
+		t.Errorf("Tags length = %d, want 2", len(summary.Tags))
 	}
 }
