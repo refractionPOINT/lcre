@@ -40,11 +40,14 @@ docker run --rm -v $(pwd):/work lcre triage /work/sample.exe
 ### Triage (Fast Analysis)
 
 ```bash
-# Basic triage
+# Basic triage (strings and heuristics enabled by default)
 lcre triage sample.exe
 
-# With strings and heuristics
-lcre triage sample.exe --strings --heuristics
+# Disable strings extraction
+lcre triage sample.exe --strings=false
+
+# Disable heuristic analysis
+lcre triage sample.exe --heuristics=false
 
 # Output as Markdown
 lcre triage sample.exe -o md
@@ -95,7 +98,8 @@ lcre query imports /bin/ls --library libc
 lcre query imports /bin/ls --function printf
 
 # List exports
-lcre query exports /bin/ls --pattern main
+lcre query exports /bin/ls
+lcre query exports /bin/ls --name main
 
 # Query IOCs
 lcre query iocs /bin/ls
@@ -117,14 +121,18 @@ lcre query function /bin/ls 0x401000 --deep
 lcre query xrefs-to /bin/ls 0x401000 --deep
 lcre query xrefs-from /bin/ls 0x401000 --deep
 
+# Find function callers and callees
+lcre query callers /bin/ls main --deep
+lcre query callees /bin/ls main --deep
+
 # Find call path between functions
 lcre query call-path /bin/ls main printf --deep
 
-# Hex dump bytes
-lcre query bytes /bin/ls --offset 0x1000 --length 256
+# Hex dump bytes (offset and length as positional args)
+lcre query bytes /bin/ls 0x1000 256
 
-# Search for byte patterns
-lcre query search-bytes /bin/ls --pattern "48 89 e5"
+# Search for byte patterns (pattern as positional arg)
+lcre query search-bytes /bin/ls "48 89 e5"
 
 # Get decompiled function (requires --deep)
 lcre query decompile /bin/ls main --deep
@@ -155,7 +163,7 @@ lcre cache clear
 # Requires Ghidra installation
 export GHIDRA_HOME=/path/to/ghidra
 
-lcre ghidra analyze sample.exe --timeout 10m
+lcre ghidra analyze sample.exe --ghidra-timeout 10m
 lcre ghidra analyze sample.exe --decompile
 ```
 
