@@ -193,7 +193,7 @@ func getExamplesForCommand(name string) []Example {
 	examples := map[string][]Example{
 		"triage": {
 			{Command: "lcre triage /path/to/suspicious.exe", Description: "Fast initial analysis of a binary"},
-			{Command: "lcre triage --no-strings /path/to/binary", Description: "Analysis without string extraction"},
+			{Command: "lcre triage --strings=false /path/to/binary", Description: "Analysis without string extraction"},
 		},
 		"report": {
 			{Command: "lcre report /path/to/malware.exe", Description: "Generate comprehensive analysis report"},
@@ -220,11 +220,7 @@ func getExamplesForCommand(name string) []Example {
 			{Command: "lcre cache info /path/to/binary", Description: "Show cache details for binary"},
 		},
 		"query summary": {
-			{Command: "lcre query summary /path/to/binary", Description: "Get analysis summary with risk level"},
-		},
-		"query heuristics": {
-			{Command: "lcre query heuristics /path/to/binary", Description: "List suspicious indicators"},
-			{Command: "lcre query heuristics --category packer /path/to/binary", Description: "Filter by category"},
+			{Command: "lcre query summary /path/to/binary", Description: "Get analysis summary with YARA matches and counts"},
 		},
 		"query iocs": {
 			{Command: "lcre query iocs /path/to/binary", Description: "Get extracted IOCs from cache"},
@@ -287,10 +283,10 @@ func getWorkflows() []Workflow {
 		{
 			Name:        "quick_triage",
 			Description: "Fast initial assessment of a suspicious binary",
-			WhenToUse:   "First step when investigating any unknown binary. Provides risk level and key indicators without deep analysis.",
+			WhenToUse:   "First step when investigating any unknown binary. Provides summary and key indicators without deep analysis.",
 			Steps: []WorkflowStep{
-				{Order: 1, Command: "lcre query summary <binary>", Description: "Get risk level overview and top findings"},
-				{Order: 2, Command: "lcre query heuristics <binary>", Description: "Check all suspicious indicators with evidence"},
+				{Order: 1, Command: "lcre query summary <binary>", Description: "Get overview with YARA matches and counts"},
+				{Order: 2, Command: "lcre query yara <binary>", Description: "Check YARA signature matches"},
 				{Order: 3, Command: "lcre query iocs <binary>", Description: "Extract IOCs (URLs, IPs, domains, file paths)"},
 			},
 		},
@@ -314,7 +310,7 @@ func getWorkflows() []Workflow {
 				{Order: 1, Command: "lcre diff <binary_a> <binary_b>", Description: "Get structural differences (sections, imports, exports)"},
 				{Order: 2, Command: "lcre query summary <binary_a>", Description: "Get summary of first binary"},
 				{Order: 3, Command: "lcre query summary <binary_b>", Description: "Get summary of second binary"},
-				{Order: 4, Command: "lcre query heuristics <binary_b>", Description: "Check new binary for suspicious indicators"},
+				{Order: 4, Command: "lcre query yara <binary_b>", Description: "Check new binary for malware signatures"},
 			},
 		},
 		{
@@ -344,9 +340,9 @@ func getWorkflows() []Workflow {
 		{
 			Name:        "packed_binary_analysis",
 			Description: "Handle packed or obfuscated binaries",
-			WhenToUse:   "When heuristics detect packing or obfuscation. The binary needs to be unpacked first for meaningful analysis.",
+			WhenToUse:   "When YARA detects packing or section entropy is high. The binary needs to be unpacked first for meaningful analysis.",
 			Steps: []WorkflowStep{
-				{Order: 1, Command: "lcre query heuristics --category packer <binary>", Description: "Identify packer signatures"},
+				{Order: 1, Command: "lcre query yara <binary>", Description: "Check for packer signatures (UPX, VMProtect, etc.)"},
 				{Order: 2, Command: "lcre query sections <binary>", Description: "Check section entropy (high entropy suggests packing)"},
 				{Order: 3, Command: "lcre query bytes <binary> 0x0 256", Description: "Examine PE header for packer artifacts"},
 				{Order: 4, Command: "lcre query imports <binary>", Description: "Check imports (packed binaries often have few imports)"},
