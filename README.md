@@ -6,6 +6,9 @@ LCRE is a CLI tool for static binary analysis and forensics automation. It provi
 
 - **Fast Triage**: Native Go parsing for PE, ELF, and Mach-O binaries
 - **Heuristic Analysis**: Detect packers, suspicious imports, and malware indicators
+- **YARA Integration**: Signature-based malware detection with embedded rules for 13+ malware families
+- **Import Hash (ImpHash)**: Calculate import hashes for fuzzy malware matching
+- **PE Anomaly Detection**: Detect RWX sections, timestamp anomalies, metadata mismatches
 - **IOC Extraction**: Extract URLs, IPs, domains, paths, and registry keys
 - **Binary Diff**: Compare two binaries to identify changes
 - **Ghidra Integration**: Deep analysis with decompilation and call graph extraction
@@ -108,6 +111,14 @@ lcre query iocs /bin/ls --type url
 # Query heuristic matches
 lcre query heuristics /bin/ls
 lcre query heuristics /bin/ls --category packer
+
+# Get import hash (PE binaries only)
+lcre query imphash sample.exe
+
+# YARA signature scanning
+lcre query yara sample.exe
+lcre query yara sample.exe --rules /path/to/rules.yar
+lcre query yara --list-families  # List covered malware families
 
 # List functions (requires --deep)
 lcre query functions /bin/ls --deep
@@ -212,7 +223,14 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
     "sha256": "...",
     "format": "PE",
     "arch": "x86_64",
-    "bits": 64
+    "bits": 64,
+    "imphash": "abc123..."
+  },
+  "pe_info": {
+    "checksum": 0,
+    "image_base": 4194304,
+    "section_alignment": 4096,
+    "entry_point_section": ".text"
   },
   "sections": [
     {
@@ -244,17 +262,36 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
 
 ## Heuristic Rules
 
-| ID | Name | Category | Description |
-|----|------|----------|-------------|
-| PACKER001 | Packer Sections | packer | UPX, ASPack, MPRESS, VMProtect section names |
-| PACKER002 | High Entropy | packer | Sections with entropy > 7.0 |
-| IMPORT001 | Process Injection | injection | CreateRemoteThread, WriteProcessMemory, etc. |
-| IMPORT002 | Anti-Debug | anti-debug | IsDebuggerPresent, CheckRemoteDebuggerPresent |
-| IMPORT003 | Persistence | persistence | RegSetValueEx, CreateService |
-| IMPORT004 | Crypto APIs | crypto | CryptEncrypt, CryptGenKey |
-| STRING001 | Network IOCs | network | URLs, IPs, domains in strings |
-| STRING002 | Suspicious Paths | evasion | /proc, Run keys, temp paths |
-| SECTION001 | Tiny Text | anomaly | Small .text with large high-entropy sections |
+| ID | Name | Category | Severity | Description |
+|----|------|----------|----------|-------------|
+| PACKER001 | Packer Sections | packer | Medium | UPX, ASPack, MPRESS, VMProtect section names |
+| PACKER002 | High Entropy | packer | Medium | Sections with entropy > 7.0 |
+| IMPORT001 | Process Injection | injection | High | CreateRemoteThread, WriteProcessMemory, etc. |
+| IMPORT002 | Anti-Debug | anti-debug | Medium | IsDebuggerPresent, CheckRemoteDebuggerPresent |
+| IMPORT003 | Persistence | persistence | High | RegSetValueEx, CreateService |
+| IMPORT004 | Crypto APIs | crypto | Low | CryptEncrypt, CryptGenKey |
+| IMPORT005 | Minimal Imports | packer | Medium | < 5 imports suggests packing |
+| IMPORT006 | Low-Level Disk Access | evasion | High | PhysicalDrive access (bootkit indicator) |
+| STRING001 | Network IOCs | network | Medium | URLs, IPs, domains in strings |
+| STRING002 | Suspicious Paths | evasion | Medium | /proc, Run keys, temp paths |
+| STRING003 | Suspicious Strings | anomaly | High | Ransomware/malware indicators |
+| SECTION001 | Tiny Text | anomaly | Medium | Small .text with large high-entropy sections |
+| ANOMALY001 | Entry Point Anomaly | anomaly | Medium | Entry point outside .text section |
+| ANOMALY002 | RWX Section | anomaly | High | Read-Write-Execute permissions |
+| ANOMALY003 | Timestamp Anomaly | anomaly | Low | Suspicious PE timestamps |
+| ANOMALY004 | Section Count Anomaly | anomaly | Low | Unusual number of sections |
+| ANOMALY005 | Metadata Mismatch | evasion | Medium | Unsigned binary claiming trusted vendor |
+| YARA001 | YARA Signature Match | anomaly | Critical | Matches known malware YARA signatures |
+| YARA002 | Malware Family Patterns | anomaly | High | Matches patterns of known malware families |
+
+### YARA Malware Families
+
+Embedded YARA rules cover the following malware families:
+- **Ransomware**: Locky, Petya, NotPetya, WannaCry, Ryuk
+- **APT**: Stuxnet, Duqu, Flame
+- **Trojans**: Emotet, Trickbot, AgentTesla
+- **Red Team Tools**: Cobalt Strike, Metasploit
+- **Packers**: UPX, VMProtect, Themida, ASPack
 
 ## Exit Codes
 
@@ -277,6 +314,10 @@ All other functionality uses Go standard library packages including `debug/pe`, 
 
 - `GHIDRA_HOME`: Path to Ghidra installation
 - `LCRE_SCRIPTS_PATH`: Path to LCRE Ghidra scripts
+
+## Optional Dependencies
+
+- **YARA**: For full signature-based detection (`apt install yara` or `brew install yara`). Without YARA, the lightweight pattern matching (YARA002) still works.
 
 ## License
 

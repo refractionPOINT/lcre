@@ -25,6 +25,21 @@ type BinaryMetadata struct {
 	Compiler   string       `json:"compiler,omitempty"`
 	Timestamp  int64        `json:"timestamp,omitempty"`
 	IsSigned   bool         `json:"is_signed,omitempty"`
+	ImpHash    string       `json:"imphash,omitempty"`
+}
+
+// PEInfo contains PE-specific metadata for anomaly detection
+type PEInfo struct {
+	Checksum           uint32 `json:"checksum"`
+	CalculatedChecksum uint32 `json:"calculated_checksum"`
+	ImageBase          uint64 `json:"image_base"`
+	SectionAlignment   uint32 `json:"section_alignment"`
+	FileAlignment      uint32 `json:"file_alignment"`
+	SizeOfHeaders      uint32 `json:"size_of_headers"`
+	Subsystem          uint16 `json:"subsystem"`
+	DllCharacteristics uint16 `json:"dll_characteristics"`
+	NumberOfSections   int    `json:"number_of_sections"`
+	EntryPointSection  string `json:"entry_point_section,omitempty"`
 }
 
 // Section represents a binary section/segment

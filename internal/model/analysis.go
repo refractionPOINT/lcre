@@ -5,6 +5,7 @@ import "time"
 // AnalysisResult is the top-level output structure for binary analysis
 type AnalysisResult struct {
 	Metadata    BinaryMetadata    `json:"metadata"`
+	PEInfo      *PEInfo           `json:"pe_info,omitempty"`
 	Sections    []Section         `json:"sections"`
 	Imports     []Import          `json:"imports"`
 	Exports     []Export          `json:"exports"`
