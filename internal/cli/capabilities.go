@@ -75,12 +75,87 @@ func init() {
 func runCapabilities(cmd *cobra.Command, args []string) error {
 	output := buildCapabilitiesOutput()
 
-	data, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal capabilities: %w", err)
+	if outputFormat == "json" {
+		data, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal capabilities: %w", err)
+		}
+		fmt.Println(string(data))
+	} else {
+		printCapabilitiesMarkdown(output)
 	}
-	fmt.Println(string(data))
 	return nil
+}
+
+func printCapabilitiesMarkdown(c *CapabilitiesOutput) {
+	fmt.Printf("# %s v%s\n\n", c.Tool, c.Version)
+	fmt.Printf("%s\n\n", c.Description)
+
+	// Global flags
+	fmt.Println("## Global Flags")
+	fmt.Println()
+	for _, f := range c.GlobalFlags {
+		if f.Shorthand != "" {
+			fmt.Printf("- `%s, %s` (%s): %s (default: %s)\n", f.Shorthand, f.Name, f.Type, f.Description, f.Default)
+		} else {
+			fmt.Printf("- `%s` (%s): %s (default: %s)\n", f.Name, f.Type, f.Description, f.Default)
+		}
+	}
+	fmt.Println()
+
+	// Commands
+	fmt.Println("## Commands")
+	fmt.Println()
+	for _, cmd := range c.Commands {
+		fmt.Printf("### %s\n\n", cmd.Name)
+		fmt.Printf("**Usage:** `%s`\n\n", cmd.Use)
+		fmt.Printf("%s\n\n", cmd.Short)
+
+		if len(cmd.Flags) > 0 {
+			fmt.Println("**Flags:**")
+			for _, f := range cmd.Flags {
+				fmt.Printf("- `%s`: %s\n", f.Name, f.Description)
+			}
+			fmt.Println()
+		}
+
+		if len(cmd.Examples) > 0 {
+			fmt.Println("**Examples:**")
+			for _, ex := range cmd.Examples {
+				fmt.Printf("- `%s` - %s\n", ex.Command, ex.Description)
+			}
+			fmt.Println()
+		}
+
+		// Subcommands
+		for _, sub := range cmd.Subcommands {
+			fmt.Printf("#### %s\n\n", sub.Name)
+			fmt.Printf("**Usage:** `%s`\n\n", sub.Use)
+			fmt.Printf("%s\n\n", sub.Short)
+
+			if len(sub.Examples) > 0 {
+				fmt.Println("**Examples:**")
+				for _, ex := range sub.Examples {
+					fmt.Printf("- `%s` - %s\n", ex.Command, ex.Description)
+				}
+				fmt.Println()
+			}
+		}
+	}
+
+	// Workflows
+	fmt.Println("## Workflows")
+	fmt.Println()
+	for _, wf := range c.Workflows {
+		fmt.Printf("### %s\n\n", wf.Name)
+		fmt.Printf("%s\n\n", wf.Description)
+		fmt.Printf("**When to use:** %s\n\n", wf.WhenToUse)
+		fmt.Println("**Steps:**")
+		for _, step := range wf.Steps {
+			fmt.Printf("%d. `%s` - %s\n", step.Order, step.Command, step.Description)
+		}
+		fmt.Println()
+	}
 }
 
 func buildCapabilitiesOutput() *CapabilitiesOutput {
