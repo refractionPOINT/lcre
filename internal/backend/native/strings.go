@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/binary"
 	"os"
+	"sort"
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // ExtractStrings extracts ASCII and UTF-16 strings from a binary
@@ -164,12 +165,7 @@ func isPrintableUTF16(c uint16) bool {
 
 // sortStringsByOffset sorts strings by their file offset
 func sortStringsByOffset(strings []model.ExtractedString) {
-	// Simple insertion sort (good enough for most cases)
-	for i := 1; i < len(strings); i++ {
-		j := i
-		for j > 0 && strings[j-1].Offset > strings[j].Offset {
-			strings[j-1], strings[j] = strings[j], strings[j-1]
-			j--
-		}
-	}
+	sort.Slice(strings, func(i, j int) bool {
+		return strings[i].Offset < strings[j].Offset
+	})
 }

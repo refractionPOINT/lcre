@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/maxime/lcre/internal/backend"
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // Options configures the Ghidra backend

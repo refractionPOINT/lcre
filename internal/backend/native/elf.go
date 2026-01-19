@@ -5,7 +5,7 @@ import (
 	"debug/elf"
 	"fmt"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // parseELF parses an ELF binary and populates the result

@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	// Register backends
-	_ "github.com/maxime/lcre/internal/backend/ghidra"
+	_ "github.com/refractionPOINT/lcre/internal/backend/ghidra"
 )
 
 // Exit codes

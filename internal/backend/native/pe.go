@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // Ordinal to function name mappings for common DLLs
@@ -230,10 +230,3 @@ func splitImport(imp string) (string, string) {
 	}
 	return "", imp
 }
-
-// PE section characteristics constants
-const (
-	IMAGE_SCN_MEM_READ    = 0x40000000
-	IMAGE_SCN_MEM_WRITE   = 0x80000000
-	IMAGE_SCN_MEM_EXECUTE = 0x20000000
-)

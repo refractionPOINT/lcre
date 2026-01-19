@@ -5,7 +5,7 @@ LCRE is a CLI tool for static binary analysis and forensics automation. It provi
 ## Features
 
 - **Fast Triage**: Native Go parsing for PE, ELF, and Mach-O binaries
-- **YARA Integration**: Signature-based malware detection with embedded rules for 13+ malware families
+- **YARA Integration**: Signature-based malware detection with custom rule support
 - **Import Hash (ImpHash)**: Calculate import hashes for fuzzy malware matching
 - **IOC Extraction**: Extract URLs, IPs, domains, paths, and registry keys
 - **Binary Diff**: Compare two binaries to identify changes
@@ -18,13 +18,13 @@ LCRE is a CLI tool for static binary analysis and forensics automation. It provi
 ### From Source
 
 ```bash
-go install github.com/maxime/lcre/cmd/lcre@latest
+go install github.com/refractionPOINT/lcre/cmd/lcre@latest
 ```
 
 ### Build from Repository
 
 ```bash
-git clone https://github.com/maxime/lcre
+git clone https://github.com/refractionPOINT/lcre
 cd lcre
 make build
 ```
@@ -109,10 +109,8 @@ lcre query iocs /bin/ls --type url
 # Get import hash (PE binaries only)
 lcre query imphash sample.exe
 
-# YARA signature scanning
-lcre query yara sample.exe
+# YARA signature scanning (requires --rules flag)
 lcre query yara sample.exe --rules /path/to/rules.yar
-lcre query yara --list-families  # List covered malware families
 
 # List functions (requires --deep)
 lcre query functions /bin/ls --deep
@@ -251,26 +249,27 @@ The AI correctly identified the sample as ransomware with HIGH confidence, docum
 
 ## YARA Rules
 
-LCRE includes embedded YARA rules for detecting malware families. The rules are automatically applied during triage and can also be queried directly.
+LCRE integrates with the YARA command-line tool for signature-based malware detection. You must provide your own YARA rules files.
 
-### Covered Malware Families
-
-- **Ransomware**: Locky, Petya, NotPetya, WannaCry, Ryuk
-- **APT**: Stuxnet, Duqu, Flame
-- **Trojans**: Emotet, Trickbot, AgentTesla
-- **Red Team Tools**: Cobalt Strike, Metasploit
-- **Packers**: UPX, VMProtect, Themida, ASPack
-- **Evasion**: Anti-VM/sandbox techniques
-
-### Using Custom Rules
+### Using YARA Rules
 
 ```bash
-# Use custom YARA rules file
-lcre query yara sample.exe --rules /path/to/custom.yar
+# Scan with a custom YARA rules file
+lcre query yara sample.exe --rules /path/to/rules.yar
 
-# List embedded malware families
-lcre query yara --list-families
+# Scan with a directory of YARA rules
+lcre query yara sample.exe --rules /path/to/rules/
+
+# Disable YARA scanning during triage
+lcre triage sample.exe --yara=false
 ```
+
+### Example Rules
+
+You can find community YARA rules from sources like:
+- [YARA Rules Repository](https://github.com/Yara-Rules/rules)
+- [ReversingLabs YARA Rules](https://github.com/reversinglabs/reversinglabs-yara-rules)
+- [Florian Roth's Signature Base](https://github.com/Neo23x0/signature-base)
 
 ## Exit Codes
 

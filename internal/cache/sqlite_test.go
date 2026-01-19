@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 func createTestDB(t *testing.T) *DB {

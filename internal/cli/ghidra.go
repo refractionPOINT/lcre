@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/maxime/lcre/internal/backend"
-	"github.com/maxime/lcre/internal/backend/ghidra"
-	"github.com/maxime/lcre/internal/output"
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	"github.com/refractionPOINT/lcre/internal/backend/ghidra"
+	"github.com/refractionPOINT/lcre/internal/output"
+	"github.com/refractionPOINT/lcre/internal/yara"
 )
 
 var (

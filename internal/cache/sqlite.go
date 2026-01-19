@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 	_ "modernc.org/sqlite"
 )
 

@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
-	"github.com/maxime/lcre/internal/util"
-	"github.com/maxime/lcre/internal/workspace"
+	"github.com/refractionPOINT/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/util"
+	"github.com/refractionPOINT/lcre/internal/workspace"
 )
 
 // Runner executes Ghidra headless analysis

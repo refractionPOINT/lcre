@@ -65,6 +65,9 @@ func runQueryBytes(cmd *cobra.Command, args []string) error {
 	offset := parseAddressArg(args[1])
 	length := parseAddressArg(args[2])
 
+	if offset < 0 {
+		return fmt.Errorf("offset must be non-negative")
+	}
 	if length <= 0 || length > 4096 {
 		return fmt.Errorf("length must be between 1 and 4096")
 	}
@@ -141,6 +144,16 @@ func runQuerySearchBytes(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	db.Close()
+
+	// Check file size before reading (limit to 100MB for search)
+	const maxSearchSize = 100 * 1024 * 1024 // 100MB
+	fileInfo, err := os.Stat(absPath)
+	if err != nil {
+		return err
+	}
+	if fileInfo.Size() > maxSearchSize {
+		return fmt.Errorf("file too large for byte search (max %d bytes, got %d)", maxSearchSize, fileInfo.Size())
+	}
 
 	// Read entire file and search
 	data, err := os.ReadFile(absPath)

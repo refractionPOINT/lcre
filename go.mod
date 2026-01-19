@@ -1,4 +1,4 @@
-module github.com/maxime/lcre
+module github.com/refractionPOINT/lcre
 
 go 1.24.0
 

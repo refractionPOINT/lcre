@@ -5,7 +5,7 @@ import (
 	"debug/macho"
 	"fmt"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // parseMachO parses a Mach-O binary and populates the result

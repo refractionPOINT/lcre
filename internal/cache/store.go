@@ -3,7 +3,7 @@ package cache
 import (
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // StoreAnalysisResult stores a complete analysis result in the cache.

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 const (

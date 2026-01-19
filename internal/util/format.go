@@ -3,7 +3,7 @@ package util
 import (
 	"os"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // Magic bytes for different binary formats

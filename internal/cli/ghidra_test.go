@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maxime/lcre/internal/backend/ghidra"
+	"github.com/refractionPOINT/lcre/internal/backend/ghidra"
 )
 
 func TestGhidraFlags(t *testing.T) {

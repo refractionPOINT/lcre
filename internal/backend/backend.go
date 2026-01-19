@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // Capabilities describes what a backend can analyze

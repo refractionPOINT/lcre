@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 func TestNewManagerWithPath(t *testing.T) {

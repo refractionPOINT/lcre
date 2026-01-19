@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maxime/lcre/internal/cache"
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/cache"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 func TestFormatBytes(t *testing.T) {

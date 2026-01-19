@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maxime/lcre/internal/backend"
-	_ "github.com/maxime/lcre/internal/backend/native"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	_ "github.com/refractionPOINT/lcre/internal/backend/native"
 )
 
 func TestValidateBinaryPath_Comprehensive(t *testing.T) {

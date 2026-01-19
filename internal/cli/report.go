@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/maxime/lcre/internal/backend"
-	_ "github.com/maxime/lcre/internal/backend/native"
-	"github.com/maxime/lcre/internal/ioc"
-	"github.com/maxime/lcre/internal/model"
-	"github.com/maxime/lcre/internal/output"
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	_ "github.com/refractionPOINT/lcre/internal/backend/native"
+	"github.com/refractionPOINT/lcre/internal/ioc"
+	"github.com/refractionPOINT/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/output"
+	"github.com/refractionPOINT/lcre/internal/yara"
 )
 
 // FullReport contains all analysis results

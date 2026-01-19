@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/maxime/lcre/internal/cache"
+	"github.com/refractionPOINT/lcre/internal/cache"
 	"github.com/spf13/cobra"
 )
 

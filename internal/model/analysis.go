@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/yara"
 )
 
 // AnalysisResult is the top-level output structure for binary analysis

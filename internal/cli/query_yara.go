@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/yara"
 	"github.com/spf13/cobra"
 )
 

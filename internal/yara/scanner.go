@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -123,7 +122,7 @@ func (s *Scanner) Scan(ctx context.Context, filePath string) (*ScanResult, error
 	return result, nil
 }
 
-// ScanWithRules scans a file using provided rule content directly
+// ScanWithRules scans a file using provided rule content directly via stdin
 func (s *Scanner) ScanWithRules(ctx context.Context, filePath string, rules string) (*ScanResult, error) {
 	result := &ScanResult{
 		Available: s.Available(),
@@ -135,15 +134,11 @@ func (s *Scanner) ScanWithRules(ctx context.Context, filePath string, rules stri
 		return result, nil
 	}
 
-	// Create a temporary file for rules
-	tmpFile := filepath.Join("/tmp", fmt.Sprintf("lcre_yara_%d.yar", ctx.Value("scan_id")))
-	// Note: In production, use os.CreateTemp
-
 	// Build yara command with stdin rules
 	args := []string{
-		"-s",           // Print matching strings
-		"-m",           // Print metadata
-		"/dev/stdin",   // Read rules from stdin
+		"-s",         // Print matching strings
+		"-m",         // Print metadata
+		"/dev/stdin", // Read rules from stdin
 		filePath,
 	}
 
@@ -152,8 +147,6 @@ func (s *Scanner) ScanWithRules(ctx context.Context, filePath string, rules stri
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-
-	_ = tmpFile // unused for now
 
 	err := cmd.Run()
 	if err != nil {

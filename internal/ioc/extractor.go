@@ -1,7 +1,7 @@
 package ioc
 
 import (
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // Extractor extracts IOCs from binary analysis results

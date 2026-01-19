@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maxime/lcre/internal/model"
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/yara"
 )
 
 func createTestManagerAndBinary(t *testing.T) (*Manager, string) {

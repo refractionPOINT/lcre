@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // MarkdownWriter writes analysis results as Markdown

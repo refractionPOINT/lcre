@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/maxime/lcre/internal/backend"
-	"github.com/maxime/lcre/internal/cache"
-	"github.com/maxime/lcre/internal/ioc"
-	"github.com/maxime/lcre/internal/model"
-	"github.com/maxime/lcre/internal/yara"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	"github.com/refractionPOINT/lcre/internal/cache"
+	"github.com/refractionPOINT/lcre/internal/ioc"
+	"github.com/refractionPOINT/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/yara"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +99,9 @@ func runAnalysis(ctx context.Context, mgr *cache.Manager, binaryPath string, dee
 		cacheDir, _ := mgr.GetCacheDir(binaryPath)
 		if gb, ok := b.(interface{ SetDecompiledDir(string) }); ok && cacheDir != "" {
 			decompiledDir := filepath.Join(cacheDir, "decompiled")
-			os.MkdirAll(decompiledDir, 0755)
+			if err := os.MkdirAll(decompiledDir, 0755); err != nil {
+				return fmt.Errorf("failed to create decompiled directory: %w", err)
+			}
 			gb.SetDecompiledDir(decompiledDir)
 		}
 	} else {

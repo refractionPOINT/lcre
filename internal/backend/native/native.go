@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/maxime/lcre/internal/backend"
-	"github.com/maxime/lcre/internal/model"
-	"github.com/maxime/lcre/internal/util"
+	"github.com/refractionPOINT/lcre/internal/backend"
+	"github.com/refractionPOINT/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/util"
 )
 
 // Backend implements native Go binary parsing

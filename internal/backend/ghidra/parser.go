@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/maxime/lcre/internal/model"
+	"github.com/refractionPOINT/lcre/internal/model"
 )
 
 // GhidraOutput represents the JSON output from ExportAnalysis.java
