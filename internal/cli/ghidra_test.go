@@ -8,48 +8,6 @@ import (
 	"github.com/refractionPOINT/lcre/internal/backend/ghidra"
 )
 
-func TestGhidraFlags(t *testing.T) {
-	cmd := ghidraCmd
-
-	// Check --ghidra-path flag
-	ghidraPathFlag := cmd.PersistentFlags().Lookup("ghidra-path")
-	if ghidraPathFlag == nil {
-		t.Error("--ghidra-path flag not found")
-	}
-	if ghidraPathFlag.DefValue != "" {
-		t.Errorf("--ghidra-path default = %q, want empty", ghidraPathFlag.DefValue)
-	}
-
-	// Check --decompile flag
-	decompileFlag := cmd.PersistentFlags().Lookup("decompile")
-	if decompileFlag == nil {
-		t.Error("--decompile flag not found")
-	}
-	if decompileFlag.DefValue != "false" {
-		t.Errorf("--decompile default = %q, want %q", decompileFlag.DefValue, "false")
-	}
-
-	// Check --ghidra-timeout flag
-	timeoutFlag := cmd.PersistentFlags().Lookup("ghidra-timeout")
-	if timeoutFlag == nil {
-		t.Error("--ghidra-timeout flag not found")
-	}
-}
-
-func TestGhidraAnalyzeCmd(t *testing.T) {
-	// Verify the analyze subcommand exists
-	found := false
-	for _, cmd := range ghidraCmd.Commands() {
-		if cmd.Use == "analyze <binary>" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Error("ghidra analyze subcommand not found")
-	}
-}
-
 func TestGhidraBackendCreation(t *testing.T) {
 	// Test that ghidra backend can be created with all options
 	opts := ghidra.Options{
@@ -126,30 +84,5 @@ func TestGhidraScriptsExist(t *testing.T) {
 		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 			t.Errorf("Required Ghidra script %s not found at %s", script, scriptPath)
 		}
-	}
-}
-
-func TestGhidraDecompileOptionsIntegration(t *testing.T) {
-	// This test ensures that when --decompile is used, the proper
-	// configuration is set up. This would have caught the original bug
-	// where DecompileAll.java was referenced but didn't exist.
-
-	// Simulate what runGhidraAnalyze does when --decompile is true
-	decompile := true
-
-	opts := ghidra.Options{
-		GhidraPath: "/fake/ghidra",
-		Decompile:  decompile,
-	}
-
-	// When decompile is enabled, the CLI should set a DecompiledDir
-	if decompile {
-		tempDir := t.TempDir()
-		opts.DecompiledDir = tempDir
-	}
-
-	// Verify that if decompile is true, DecompiledDir should be set
-	if opts.Decompile && opts.DecompiledDir == "" {
-		t.Error("When Decompile is true, DecompiledDir should be set by the CLI")
 	}
 }

@@ -191,23 +191,13 @@ func shorthandStr(s string) string {
 
 func getExamplesForCommand(name string) []Example {
 	examples := map[string][]Example{
-		"triage": {
-			{Command: "lcre triage /path/to/suspicious.exe", Description: "Fast initial analysis of a binary"},
-			{Command: "lcre triage --strings=false /path/to/binary", Description: "Analysis without string extraction"},
-		},
-		"report": {
-			{Command: "lcre report /path/to/malware.exe", Description: "Generate comprehensive analysis report"},
-			{Command: "lcre report -o md /path/to/binary > report.md", Description: "Generate markdown report"},
-		},
-		"iocs": {
-			{Command: "lcre iocs /path/to/binary", Description: "Extract IOCs from binary strings"},
+		"analyze": {
+			{Command: "lcre analyze /path/to/suspicious.exe", Description: "Fast initial analysis of a binary"},
+			{Command: "lcre analyze --strings=false /path/to/binary", Description: "Analysis without string extraction"},
+			{Command: "lcre analyze --iocs /path/to/binary", Description: "Include IOC extraction"},
 		},
 		"diff": {
 			{Command: "lcre diff old_version.exe new_version.exe", Description: "Compare two binary versions"},
-		},
-		"ghidra analyze": {
-			{Command: "lcre ghidra analyze /path/to/binary", Description: "Deep analysis with Ghidra"},
-			{Command: "lcre ghidra analyze --decompile /path/to/binary", Description: "Include decompiled code"},
 		},
 		"cache list": {
 			{Command: "lcre cache list", Description: "List all cached analyses"},
@@ -221,6 +211,7 @@ func getExamplesForCommand(name string) []Example {
 		},
 		"query summary": {
 			{Command: "lcre query summary /path/to/binary", Description: "Get analysis summary with YARA matches and counts"},
+			{Command: "lcre query summary --full /path/to/binary", Description: "Get summary with full metadata details"},
 		},
 		"query iocs": {
 			{Command: "lcre query iocs /path/to/binary", Description: "Get extracted IOCs from cache"},
@@ -270,9 +261,6 @@ func getExamplesForCommand(name string) []Example {
 		"query search-bytes": {
 			{Command: "lcre query search-bytes /path/to/binary 4D5A9000", Description: "Search for byte pattern"},
 		},
-		"query info": {
-			{Command: "lcre query info /path/to/binary", Description: "Get binary metadata"},
-		},
 	}
 
 	return examples[name]
@@ -296,7 +284,7 @@ func getWorkflows() []Workflow {
 			WhenToUse:   "When quick triage indicates high risk or suspicious behavior requiring deeper investigation.",
 			Steps: []WorkflowStep{
 				{Order: 1, Command: "lcre query summary <binary>", Description: "Initial risk assessment"},
-				{Order: 2, Command: "lcre ghidra analyze --decompile <binary>", Description: "Run deep analysis with Ghidra to get functions and decompiled code"},
+				{Order: 2, Command: "lcre query summary --deep <binary>", Description: "Trigger deep analysis with Ghidra"},
 				{Order: 3, Command: "lcre query --deep functions <binary>", Description: "List all functions for review"},
 				{Order: 4, Command: "lcre query --deep decompile <binary> <suspicious_func>", Description: "Examine suspicious functions"},
 				{Order: 5, Command: "lcre query --deep call-path <binary> main <target_func>", Description: "Trace how malicious functions are reached"},
@@ -318,7 +306,7 @@ func getWorkflows() []Workflow {
 			Description: "Comprehensive IOC extraction for threat intelligence",
 			WhenToUse:   "When building threat intelligence from a malware sample - extracting network indicators, file paths, and other artifacts.",
 			Steps: []WorkflowStep{
-				{Order: 1, Command: "lcre iocs <binary>", Description: "Quick IOC extraction"},
+				{Order: 1, Command: "lcre query iocs <binary>", Description: "Extract IOCs from cached analysis"},
 				{Order: 2, Command: "lcre query strings --pattern http <binary>", Description: "Find URL-related strings"},
 				{Order: 3, Command: "lcre query strings --pattern \"C:\\\\\" <binary>", Description: "Find Windows file paths"},
 				{Order: 4, Command: "lcre query imports --library ws2_32 <binary>", Description: "Check for networking imports"},

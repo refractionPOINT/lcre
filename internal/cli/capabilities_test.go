@@ -60,13 +60,10 @@ func TestCapabilitiesCommands(t *testing.T) {
 
 	// Check that expected top-level commands are present
 	expectedCommands := map[string]bool{
-		"triage": false,
-		"report": false,
-		"iocs":   false,
-		"diff":   false,
-		"ghidra": false,
-		"cache":  false,
-		"query":  false,
+		"analyze": false,
+		"diff":    false,
+		"cache":   false,
+		"query":   false,
 	}
 
 	for _, cmd := range output.Commands {
@@ -299,7 +296,7 @@ func TestGetWorkflows(t *testing.T) {
 
 func TestGetExamplesForCommand(t *testing.T) {
 	// Test commands that should have examples
-	commandsWithExamples := []string{"triage", "report", "query summary", "diff"}
+	commandsWithExamples := []string{"analyze", "query summary", "diff"}
 
 	for _, cmd := range commandsWithExamples {
 		examples := getExamplesForCommand(cmd)

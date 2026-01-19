@@ -4,7 +4,7 @@ LCRE is a CLI tool for static binary analysis and forensics automation. It provi
 
 ## Features
 
-- **Fast Triage**: Native Go parsing for PE, ELF, and Mach-O binaries
+- **Fast Analysis**: Native Go parsing for PE, ELF, and Mach-O binaries
 - **YARA Integration**: Signature-based malware detection with custom rule support
 - **Import Hash (ImpHash)**: Calculate import hashes for fuzzy malware matching
 - **IOC Extraction**: Extract URLs, IPs, domains, paths, and registry keys
@@ -33,43 +33,44 @@ make build
 
 ```bash
 docker build -t lcre .
-docker run --rm -v $(pwd):/work lcre triage /work/sample.exe
+docker run --rm -v $(pwd):/work lcre analyze /work/sample.exe
+```
+
+## Quick Reference
+
+```
+lcre analyze <binary>           # Fast one-shot analysis
+lcre query <subcommand> <binary> # Cached interactive queries
+lcre diff <binary_a> <binary_b>  # Compare two binaries
+lcre cache <subcommand>          # Manage analysis cache
+lcre capabilities                # Machine-readable command schema
 ```
 
 ## Usage
 
-### Triage (Fast Analysis)
+### Analyze (Fast Analysis)
 
 ```bash
-# Basic triage (strings and YARA enabled by default)
-lcre triage sample.exe
+# Basic analysis (strings and YARA enabled by default, markdown output)
+lcre analyze sample.exe
 
 # Disable strings extraction
-lcre triage sample.exe --strings=false
+lcre analyze sample.exe --strings=false
 
 # Disable YARA scanning
-lcre triage sample.exe --yara=false
+lcre analyze sample.exe --yara=false
 
-# Output as Markdown
-lcre triage sample.exe -o md
-```
+# Include IOC extraction
+lcre analyze sample.exe --iocs
 
-### IOC Extraction
-
-```bash
-lcre iocs malware.exe
+# Output as JSON
+lcre analyze sample.exe -o json
 ```
 
 ### Binary Diff
 
 ```bash
 lcre diff version1.exe version2.exe
-```
-
-### Full Report
-
-```bash
-lcre report sample.exe -o json > report.json
 ```
 
 ### Interactive Query (Cached Analysis)
@@ -79,6 +80,9 @@ The query system provides instant access to analysis results. First query trigge
 ```bash
 # Get a quick summary
 lcre query summary /bin/ls
+
+# Summary with full metadata details
+lcre query summary /bin/ls --full
 
 # Query with deep analysis (uses Ghidra)
 lcre query summary /bin/ls --deep
@@ -109,7 +113,7 @@ lcre query iocs /bin/ls --type url
 # Get import hash (PE binaries only)
 lcre query imphash sample.exe
 
-# YARA signature scanning (requires --rules flag)
+# YARA signature scanning
 lcre query yara sample.exe --rules /path/to/rules.yar
 
 # List functions (requires --deep)
@@ -141,6 +145,22 @@ lcre query search-bytes /bin/ls "48 89 e5"
 lcre query decompile /bin/ls main --deep
 ```
 
+### Deep Analysis with Ghidra
+
+For deep analysis including function extraction, decompilation, and call graphs, use the `--deep` flag with any query command:
+
+```bash
+# Requires Ghidra installation
+export GHIDRA_HOME=/path/to/ghidra
+
+# First query with --deep triggers Ghidra analysis
+lcre query summary /bin/ls --deep
+
+# Subsequent queries use cached Ghidra results
+lcre query functions /bin/ls --deep
+lcre query decompile /bin/ls main --deep
+```
+
 ### Cache Management
 
 ```bash
@@ -158,16 +178,6 @@ lcre cache clear abc123def456...
 
 # Clear all caches
 lcre cache clear
-```
-
-### Ghidra Deep Analysis
-
-```bash
-# Requires Ghidra installation
-export GHIDRA_HOME=/path/to/ghidra
-
-lcre ghidra analyze sample.exe --ghidra-timeout 10m
-lcre ghidra analyze sample.exe --decompile
 ```
 
 ### AI Assistant Integration
@@ -189,12 +199,12 @@ See the [Claude Code Quick-Start Guide](docs/CLAUDE_CODE_GUIDE.md) for AI-assist
 
 We conducted an experiment where Claude Code was given an unknown malware sample and asked to determine if it was malicious using only LCRE commands. The AI performed:
 
-- Initial triage and hash extraction
+- Initial analysis and hash extraction
 - Section entropy analysis (detected packing)
 - IOC extraction (found Bitcoin addresses)
 - String searches (found ransomware artifacts)
 - Import analysis (identified crypto and persistence APIs)
-- Ghidra deep analysis (decompiled key functions)
+- Deep analysis with Ghidra (decompiled key functions)
 
 The AI correctly identified the sample as ransomware with HIGH confidence, documenting specific CLI evidence for every finding.
 
@@ -260,8 +270,8 @@ lcre query yara sample.exe --rules /path/to/rules.yar
 # Scan with a directory of YARA rules
 lcre query yara sample.exe --rules /path/to/rules/
 
-# Disable YARA scanning during triage
-lcre triage sample.exe --yara=false
+# Disable YARA scanning during analysis
+lcre analyze sample.exe --yara=false
 ```
 
 ### Example Rules
@@ -295,7 +305,7 @@ All other functionality uses Go standard library packages including `debug/pe`, 
 
 ## Optional Dependencies
 
-- **YARA**: For signature-based malware detection (`apt install yara` or `brew install yara`). YARA scanning is enabled by default in triage.
+- **YARA**: For signature-based malware detection (`apt install yara` or `brew install yara`). YARA scanning is enabled by default in analysis.
 
 ## License
 

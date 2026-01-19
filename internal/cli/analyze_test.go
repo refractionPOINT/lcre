@@ -44,9 +44,9 @@ func TestValidateBinaryPath_Comprehensive(t *testing.T) {
 	}
 }
 
-func TestTriageFlags(t *testing.T) {
+func TestAnalyzeFlags(t *testing.T) {
 	// Verify default flag values
-	cmd := triageCmd
+	cmd := analyzeCmd
 
 	// Check default flag values
 	stringsFlag := cmd.Flags().Lookup("strings")
@@ -72,6 +72,14 @@ func TestTriageFlags(t *testing.T) {
 	if minStrLenFlag.DefValue != "4" {
 		t.Errorf("--min-string-len default = %q, want %q", minStrLenFlag.DefValue, "4")
 	}
+
+	iocsFlag := cmd.Flags().Lookup("iocs")
+	if iocsFlag == nil {
+		t.Error("--iocs flag not found")
+	}
+	if iocsFlag.DefValue != "false" {
+		t.Errorf("--iocs default = %q, want %q", iocsFlag.DefValue, "false")
+	}
 }
 
 func TestNativeBackendAnalysis(t *testing.T) {
@@ -79,7 +87,7 @@ func TestNativeBackendAnalysis(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	binaryPath := findSystemBinaryForTriage(t)
+	binaryPath := findSystemBinary(t)
 
 	b, err := backend.DefaultRegistry.Get("native")
 	if err != nil {
@@ -123,7 +131,7 @@ func TestNativeBackendWithOptions(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	binaryPath := findSystemBinaryForTriage(t)
+	binaryPath := findSystemBinary(t)
 
 	b, err := backend.DefaultRegistry.Get("native")
 	if err != nil {
@@ -265,18 +273,7 @@ func TestDefaultOptions(t *testing.T) {
 	}
 }
 
-// Helper function
-func findSystemBinaryForTriage(t *testing.T) string {
-	t.Helper()
-	candidates := []string{"/bin/true", "/bin/ls", "/bin/cat", "/usr/bin/true", "/usr/bin/ls"}
-	for _, path := range candidates {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	t.Skip("No suitable system binary found for integration test")
-	return ""
-}
+// findSystemBinary is defined in query_test.go
 
 func containsSubstring(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {

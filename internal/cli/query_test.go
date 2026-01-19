@@ -881,18 +881,14 @@ func TestSummaryOutput_Structure(t *testing.T) {
 	}
 }
 
-func TestInfoOutput_Structure(t *testing.T) {
-	output := InfoOutput{
+func TestFullMetadata_Structure(t *testing.T) {
+	output := FullMetadata{
 		Path:     "/bin/ls",
 		Name:     "ls",
-		Format:   "elf",
-		Arch:     "x86_64",
 		Bits:     64,
 		Endian:   "little",
-		Size:     140000,
 		MD5:      "abc123",
 		SHA1:     "def456",
-		SHA256:   "ghi789",
 		Compiler: "gcc",
 		IsSigned: false,
 	}
@@ -1295,7 +1291,7 @@ func TestPrintSummaryMarkdown(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	printSummaryMarkdown(summaryOutput, meta)
+	printSummaryMarkdown(summaryOutput, meta, false)
 
 	w.Close()
 	os.Stdout = old

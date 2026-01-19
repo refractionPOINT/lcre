@@ -45,7 +45,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format (json, md)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "md", "Output format (json, md)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "t", 120*time.Second, "Analysis timeout")
 }

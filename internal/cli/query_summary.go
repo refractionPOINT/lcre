@@ -11,27 +11,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	summaryFull bool
+)
+
 var querySummaryCmd = &cobra.Command{
 	Use:   "summary <binary>",
 	Short: "Get analysis summary",
 	Long: `Get a summary of the binary analysis including metadata and counts.
-First query triggers analysis, subsequent queries are instant.`,
+First query triggers analysis, subsequent queries are instant.
+
+Use --full to include complete metadata details (hashes, compiler, timestamp, etc.)`,
 	Args: cobra.ExactArgs(1),
 	RunE: runQuerySummary,
 }
 
 func init() {
+	querySummaryCmd.Flags().BoolVar(&summaryFull, "full", false, "Include full metadata details")
 	queryCmd.AddCommand(querySummaryCmd)
 }
 
 // SummaryOutput represents the JSON output for the summary command.
 type SummaryOutput struct {
-	Metadata       MetadataSummary  `json:"metadata"`
-	YARAMatchCount int              `json:"yara_match_count"`
-	YARAMatches    []YARASummary    `json:"yara_matches,omitempty"`
-	Counts         CountSummary     `json:"counts"`
-	Cached         bool             `json:"cached"`
-	AnalysisTime   string           `json:"analysis_time,omitempty"`
+	Metadata       MetadataSummary   `json:"metadata"`
+	FullMetadata   *FullMetadata     `json:"full_metadata,omitempty"`
+	YARAMatchCount int               `json:"yara_match_count"`
+	YARAMatches    []YARASummary     `json:"yara_matches,omitempty"`
+	Counts         CountSummary      `json:"counts"`
+	Cached         bool              `json:"cached"`
+	AnalysisTime   string            `json:"analysis_time,omitempty"`
 }
 
 type MetadataSummary struct {
@@ -39,6 +47,18 @@ type MetadataSummary struct {
 	Arch   string `json:"arch"`
 	Size   int64  `json:"size"`
 	SHA256 string `json:"sha256"`
+}
+
+type FullMetadata struct {
+	Path      string `json:"path"`
+	Name      string `json:"name"`
+	Bits      int    `json:"bits"`
+	Endian    string `json:"endian"`
+	MD5       string `json:"md5"`
+	SHA1      string `json:"sha1"`
+	Compiler  string `json:"compiler,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+	IsSigned  bool   `json:"is_signed"`
 }
 
 type YARASummary struct {
@@ -119,6 +139,21 @@ func runQuerySummary(cmd *cobra.Command, args []string) error {
 		Cached: !wasNew,
 	}
 
+	// Include full metadata if requested
+	if summaryFull {
+		output.FullMetadata = &FullMetadata{
+			Path:      meta.Binary.Path,
+			Name:      meta.Binary.Name,
+			Bits:      meta.Binary.Bits,
+			Endian:    string(meta.Binary.Endian),
+			MD5:       meta.Binary.MD5,
+			SHA1:      meta.Binary.SHA1,
+			Compiler:  meta.Binary.Compiler,
+			Timestamp: meta.Binary.Timestamp,
+			IsSigned:  meta.Binary.IsSigned,
+		}
+	}
+
 	if wasNew {
 		output.AnalysisTime = fmt.Sprintf("%.2fs", time.Since(start).Seconds())
 	}
@@ -126,16 +161,34 @@ func runQuerySummary(cmd *cobra.Command, args []string) error {
 	if outputFormat == "json" {
 		outputJSON(output)
 	} else {
-		printSummaryMarkdown(output, meta)
+		printSummaryMarkdown(output, meta, summaryFull)
 	}
 
 	return nil
 }
 
-func printSummaryMarkdown(s SummaryOutput, meta *cache.CachedMetadata) {
+func printSummaryMarkdown(s SummaryOutput, meta *cache.CachedMetadata, full bool) {
 	fmt.Printf("# Binary Summary\n\n")
 	fmt.Printf("**Format:** %s | **Arch:** %s | **Size:** %s\n", s.Metadata.Format, s.Metadata.Arch, formatBytes(s.Metadata.Size))
 	fmt.Printf("**SHA256:** %s\n\n", s.Metadata.SHA256)
+
+	// Full metadata details
+	if full && s.FullMetadata != nil {
+		fmt.Printf("## Metadata Details\n")
+		fmt.Printf("- **Path:** %s\n", s.FullMetadata.Path)
+		fmt.Printf("- **Name:** %s\n", s.FullMetadata.Name)
+		fmt.Printf("- **Architecture:** %s (%d-bit, %s)\n", s.Metadata.Arch, s.FullMetadata.Bits, s.FullMetadata.Endian)
+		fmt.Printf("- **MD5:** %s\n", s.FullMetadata.MD5)
+		fmt.Printf("- **SHA1:** %s\n", s.FullMetadata.SHA1)
+		if s.FullMetadata.Compiler != "" {
+			fmt.Printf("- **Compiler:** %s\n", s.FullMetadata.Compiler)
+		}
+		if s.FullMetadata.Timestamp > 0 {
+			fmt.Printf("- **Timestamp:** %d\n", s.FullMetadata.Timestamp)
+		}
+		fmt.Printf("- **Signed:** %v\n", s.FullMetadata.IsSigned)
+		fmt.Println()
+	}
 
 	if len(s.YARAMatches) > 0 {
 		fmt.Printf("## YARA Matches (%d)\n", s.YARAMatchCount)
