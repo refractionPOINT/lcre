@@ -1,6 +1,7 @@
 # LCRE - Binary Forensics CLI Tool
 
 LCRE is a CLI tool for static binary analysis and forensics automation. It provides fast triage via native Go parsing and deep analysis via Ghidra headless integration.
+The goal of this CLI is not to implement new capabilities itself, but to stand on the shoulders of giants and unify the capabilities under a single CLI that LLMs can easily use.
 
 ## Features
 
