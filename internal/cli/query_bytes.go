@@ -73,7 +73,7 @@ func runQueryBytes(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure binary is analyzed (for consistency)
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, false)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func runQuerySearchBytes(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure binary is analyzed (for consistency)
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, false)
 	if err != nil {
 		return err
 	}

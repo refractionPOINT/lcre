@@ -306,14 +306,14 @@ func getExamplesForCommand(name string) []Example {
 			{Command: "lcre query strings --pattern http /path/to/binary", Description: "Search for pattern"},
 		},
 		"query functions": {
-			{Command: "lcre query --deep functions /path/to/binary", Description: "List functions (requires deep analysis)"},
+			{Command: "lcre query functions /path/to/binary", Description: "List functions (requires deep analysis)"},
 		},
 		"query function": {
 			{Command: "lcre query function /path/to/binary main", Description: "Get function details"},
 			{Command: "lcre query function /path/to/binary 0x401000", Description: "Get function by address"},
 		},
 		"query decompile": {
-			{Command: "lcre query --deep decompile /path/to/binary main", Description: "Decompile function"},
+			{Command: "lcre query decompile /path/to/binary main", Description: "Decompile function"},
 		},
 		"query callers": {
 			{Command: "lcre query callers /path/to/binary func_name", Description: "Find who calls this function"},
@@ -359,10 +359,10 @@ func getWorkflows() []Workflow {
 			WhenToUse:   "When quick triage indicates high risk or suspicious behavior requiring deeper investigation.",
 			Steps: []WorkflowStep{
 				{Order: 1, Command: "lcre query summary <binary>", Description: "Initial risk assessment"},
-				{Order: 2, Command: "lcre query summary --deep <binary>", Description: "Trigger deep analysis with Ghidra"},
-				{Order: 3, Command: "lcre query --deep functions <binary>", Description: "List all functions for review"},
-				{Order: 4, Command: "lcre query --deep decompile <binary> <suspicious_func>", Description: "Examine suspicious functions"},
-				{Order: 5, Command: "lcre query --deep call-path <binary> main <target_func>", Description: "Trace how malicious functions are reached"},
+				{Order: 2, Command: "lcre query summary <binary>", Description: "Trigger deep analysis with Ghidra"},
+				{Order: 3, Command: "lcre query functions <binary>", Description: "List all functions for review"},
+				{Order: 4, Command: "lcre query decompile <binary> <suspicious_func>", Description: "Examine suspicious functions"},
+				{Order: 5, Command: "lcre query call-path <binary> main <target_func>", Description: "Trace how malicious functions are reached"},
 			},
 		},
 		{
@@ -393,11 +393,11 @@ func getWorkflows() []Workflow {
 			Description: "Trace execution flow through functions",
 			WhenToUse:   "When understanding how a specific functionality is implemented or how a suspicious function is called.",
 			Steps: []WorkflowStep{
-				{Order: 1, Command: "lcre query --deep functions --name <pattern> <binary>", Description: "Find functions matching pattern"},
-				{Order: 2, Command: "lcre query --deep function <binary> <func_name>", Description: "Get function details including callers/callees"},
-				{Order: 3, Command: "lcre query --deep callers <binary> <func_name>", Description: "Find all functions that call this function"},
-				{Order: 4, Command: "lcre query --deep callees <binary> <func_name>", Description: "Find all functions called by this function"},
-				{Order: 5, Command: "lcre query --deep decompile <binary> <func_name>", Description: "Examine decompiled code"},
+				{Order: 1, Command: "lcre query functions --name <pattern> <binary>", Description: "Find functions matching pattern"},
+				{Order: 2, Command: "lcre query function <binary> <func_name>", Description: "Get function details including callers/callees"},
+				{Order: 3, Command: "lcre query callers <binary> <func_name>", Description: "Find all functions that call this function"},
+				{Order: 4, Command: "lcre query callees <binary> <func_name>", Description: "Find all functions called by this function"},
+				{Order: 5, Command: "lcre query decompile <binary> <func_name>", Description: "Examine decompiled code"},
 			},
 		},
 		{

@@ -86,7 +86,7 @@ func runQuerySummary(cmd *cobra.Command, args []string) error {
 	}
 
 	start := time.Now()
-	mgr, db, wasNew, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	mgr, db, wasNew, err := ensureAnalyzed(ctx, absPath, false)
 	if err != nil {
 		return err
 	}

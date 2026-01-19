@@ -16,7 +16,7 @@ var (
 var queryCallPathCmd = &cobra.Command{
 	Use:   "call-path <binary> <from> <to>",
 	Short: "Find call path between functions",
-	Long:  "Find a call path between two functions using BFS. Requires deep analysis.",
+	Long:  "Find a call path between two functions using BFS. Automatically triggers Ghidra analysis.",
 	Args:  cobra.ExactArgs(3),
 	RunE:  runQueryCallPath,
 }
@@ -51,7 +51,7 @@ func runQueryCallPath(cmd *cobra.Command, args []string) error {
 	fromFunc := args[1]
 	toFunc := args[2]
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}

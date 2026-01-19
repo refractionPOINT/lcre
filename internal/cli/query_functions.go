@@ -17,7 +17,7 @@ var (
 var queryFunctionsCmd = &cobra.Command{
 	Use:   "functions <binary>",
 	Short: "List functions",
-	Long:  "List functions in the binary. Requires deep analysis (--deep flag on first query).",
+	Long:  "List functions in the binary. Automatically triggers Ghidra analysis on first query.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runQueryFunctions,
 }
@@ -75,7 +75,7 @@ func runQueryFunctions(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	mgr, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	mgr, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func runQueryFunction(cmd *cobra.Command, args []string) error {
 
 	nameOrAddr := args[1]
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func printFunctionsMarkdown(f FunctionsOutput) {
 	fmt.Printf("# Functions (%d)\n\n", f.Count)
 
 	if !f.HasDeep {
-		fmt.Println("_Note: Deep analysis not performed. Run with --deep flag for function details._")
+		fmt.Println("_Note: Deep analysis not performed. Ghidra may not be available._")
 		fmt.Println()
 	}
 

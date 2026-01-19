@@ -46,7 +46,7 @@ func runQueryImpHash(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	mgr, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	mgr, db, _, err := ensureAnalyzed(ctx, absPath, false)
 	if err != nil {
 		return err
 	}

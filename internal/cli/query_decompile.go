@@ -12,7 +12,7 @@ var queryDecompileCmd = &cobra.Command{
 	Use:   "decompile <binary> <function>",
 	Short: "Decompile a function",
 	Long: `Get the decompiled pseudocode for a function.
-Requires deep analysis (--deep flag on first query) and Ghidra to be available.`,
+Automatically triggers Ghidra analysis on first query.`,
 	Args: cobra.ExactArgs(2),
 	RunE: runQueryDecompile,
 }
@@ -92,7 +92,7 @@ func runQueryDecompile(cmd *cobra.Command, args []string) error {
 		if decompiled == "" {
 			fmt.Printf("# Function: %s @ %s\n\n", f.Name, output.Address)
 			fmt.Println("Decompiled code not available.")
-			fmt.Println("Decompilation requires Ghidra analysis with --deep flag.")
+			fmt.Println("Decompilation requires Ghidra to be installed and available.")
 		} else {
 			fmt.Printf("# Function: %s @ %s\n\n", f.Name, output.Address)
 			fmt.Println("```c")

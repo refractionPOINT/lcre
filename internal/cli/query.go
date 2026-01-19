@@ -16,20 +16,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	queryDeep bool
-)
-
 var queryCmd = &cobra.Command{
 	Use:   "query <binary> <subcommand>",
 	Short: "Query binary analysis data",
 	Long: `Query cached binary analysis data interactively.
 First query on a binary triggers analysis and caching.
-Subsequent queries are instant.`,
+Subsequent queries are instant.
+
+Commands that require Ghidra (functions, decompile, callers, callees,
+call-path, xrefs) will automatically trigger deep analysis on first use.`,
 }
 
 func init() {
-	queryCmd.PersistentFlags().BoolVar(&queryDeep, "deep", false, "Enable deep analysis (Ghidra)")
 	rootCmd.AddCommand(queryCmd)
 }
 

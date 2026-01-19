@@ -44,7 +44,7 @@ This command provides:
 - IOC extraction (optional)
 
 For deep analysis with function extraction and decompilation,
-use 'lcre query <binary> --deep' instead.`,
+use 'lcre query functions <binary>' or 'lcre query decompile <binary> <func>'.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAnalyze,
 }

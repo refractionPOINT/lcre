@@ -85,7 +85,7 @@ func runQueryXrefsTo(cmd *cobra.Command, args []string) error {
 
 	address := parseAddressArg(args[1])
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func runQueryXrefsFrom(cmd *cobra.Command, args []string) error {
 
 	address := parseAddressArg(args[1])
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func runQueryCallers(cmd *cobra.Command, args []string) error {
 
 	funcNameOrAddr := args[1]
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func runQueryCallees(cmd *cobra.Command, args []string) error {
 
 	funcNameOrAddr := args[1]
 
-	_, db, _, err := ensureAnalyzed(ctx, absPath, queryDeep)
+	_, db, _, err := ensureAnalyzed(ctx, absPath, true)
 	if err != nil {
 		return err
 	}
