@@ -83,7 +83,7 @@ func TestStoreAnalysisResult(t *testing.T) {
 			},
 			Available: true,
 		},
-		Backend:   "native",
+		Backend:   "ghidra",
 		Duration:  1.5,
 		Timestamp: time.Now(),
 	}

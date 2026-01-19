@@ -79,8 +79,13 @@ func ensureAnalyzed(ctx context.Context, binaryPath string, forceDeep bool) (*ca
 }
 
 // runAnalysis performs the actual analysis and stores results in cache.
+// If isUpdate is true, only the deep analysis data (functions, call graph) is added to existing cache.
 func runAnalysis(ctx context.Context, mgr *cache.Manager, binaryPath string, deep bool) error {
 	start := time.Now()
+
+	// Check if this is an update to existing cache
+	exists, _ := mgr.Exists(binaryPath)
+	isUpdate := exists && deep
 
 	// Get appropriate backend
 	var b backend.Backend
@@ -123,6 +128,17 @@ func runAnalysis(ctx context.Context, mgr *cache.Manager, binaryPath string, dee
 	result, err := b.Analyze(ctx, binaryPath, opts)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
+	}
+
+	// For updates (adding deep analysis to existing cache), use UpdateWithDeepAnalysis
+	if isUpdate {
+		if err := cache.UpdateWithDeepAnalysis(mgr, binaryPath, result); err != nil {
+			return fmt.Errorf("cache update failed: %w", err)
+		}
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Deep analysis complete in %.2fs (cached)\n", time.Since(start).Seconds())
+		}
+		return nil
 	}
 
 	// Run YARA scan

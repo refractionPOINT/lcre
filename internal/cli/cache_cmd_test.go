@@ -327,6 +327,7 @@ func TestCacheListEntry_DeepAnalysis(t *testing.T) {
 	}
 	deepResult := &model.AnalysisResult{
 		Metadata: model.BinaryMetadata{Name: "deep"},
+		Backend:  "ghidra",
 		Functions: []model.Function{
 			{Name: "main", Address: 0x1000},
 		},

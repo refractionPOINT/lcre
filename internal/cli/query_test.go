@@ -159,7 +159,7 @@ func setupTestCache(t *testing.T) (*cache.Manager, string) {
 			},
 			Available: true,
 		},
-		Backend:   "native",
+		Backend:   "ghidra",
 		Duration:  0.5,
 		Timestamp: time.Now(),
 	}

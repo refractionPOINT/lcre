@@ -128,8 +128,8 @@ func StoreAnalysisResult(mgr *Manager, binaryPath string, result *model.Analysis
 		yaraMatchCount = len(result.YARA.Matches)
 	}
 
-	// Determine if this was a deep analysis (has functions/callgraph)
-	deepAnalysis := len(result.Functions) > 0 || (result.CallGraph != nil && len(result.CallGraph.Edges) > 0)
+	// Determine if this was a deep analysis (Ghidra backend)
+	deepAnalysis := result.Backend == "ghidra"
 
 	// Save quick-access metadata
 	meta := &CachedMetadata{
