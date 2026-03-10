@@ -336,6 +336,26 @@ func getExamplesForCommand(name string) []Example {
 		"query search-bytes": {
 			{Command: "lcre query search-bytes /path/to/binary 4D5A9000", Description: "Search for byte pattern"},
 		},
+		"enrich": {
+			{Command: "lcre enrich sample.exe --tool capa --input capa.json", Description: "Import capa capabilities"},
+			{Command: "lcre enrich sample.exe --tool diec --input diec.json", Description: "Import packer/compiler detections"},
+			{Command: "lcre enrich sample.exe --tool floss --input floss.json", Description: "Import obfuscated strings"},
+			{Command: "lcre enrich sample.exe --tool peframe --input peframe.json", Description: "Import any tool output"},
+		},
+		"query capabilities": {
+			{Command: "lcre query capabilities /path/to/binary", Description: "List all detected capabilities"},
+			{Command: "lcre query capabilities /path/to/binary --namespace anti-analysis", Description: "Filter by namespace"},
+		},
+		"query packer": {
+			{Command: "lcre query packer /path/to/binary", Description: "Show packer/compiler detections"},
+			{Command: "lcre query packer /path/to/binary --type packer", Description: "Filter by detection type"},
+		},
+		"query enrichments": {
+			{Command: "lcre query enrichments /path/to/binary", Description: "List all imported enrichments"},
+		},
+		"query enrichment": {
+			{Command: "lcre query enrichment /path/to/binary capa", Description: "View raw capa output"},
+		},
 	}
 
 	return examples[name]
@@ -420,6 +440,23 @@ func getWorkflows() []Workflow {
 				{Order: 2, Command: "lcre query strings --pattern password <binary>", Description: "Search for credential-related strings"},
 				{Order: 3, Command: "lcre query strings --pattern config <binary>", Description: "Search for configuration strings"},
 				{Order: 4, Command: "lcre query strings --at 0x<offset> <binary>", Description: "Get string at specific offset"},
+			},
+		},
+		{
+			Name:        "remnux_enrichment",
+			Description: "Enrich LCRE analysis with external REMnux tools via MCP",
+			WhenToUse:   "When a REMnux MCP server is available. Adds behavioral capabilities (capa), packer/compiler detection (diec), obfuscated strings (floss), and any other REMnux tool output to the LCRE cache.",
+			Steps: []WorkflowStep{
+				{Order: 1, Command: "lcre analyze <binary>", Description: "Run native LCRE analysis first"},
+				{Order: 2, Command: "(upload binary to REMnux via MCP)", Description: "Use mcp__remnux__upload_from_host to send binary"},
+				{Order: 3, Command: "(run capa -j on REMnux)", Description: "Use mcp__remnux__run_tool for capa with JSON output"},
+				{Order: 4, Command: "(run diec --json on REMnux)", Description: "Use mcp__remnux__run_tool for diec with JSON output"},
+				{Order: 5, Command: "(run floss -j on REMnux)", Description: "Use mcp__remnux__run_tool for floss with JSON output"},
+				{Order: 6, Command: "lcre enrich <binary> --tool capa --input capa.json", Description: "Import capa capabilities into cache"},
+				{Order: 7, Command: "lcre enrich <binary> --tool diec --input diec.json", Description: "Import packer/compiler detections"},
+				{Order: 8, Command: "lcre enrich <binary> --tool floss --input floss.json", Description: "Import obfuscated strings"},
+				{Order: 9, Command: "lcre query capabilities <binary>", Description: "Review behavioral capabilities with ATT&CK mappings"},
+				{Order: 10, Command: "lcre query packer <binary>", Description: "Check packer/compiler detections"},
 			},
 		},
 	}

@@ -107,7 +107,7 @@ func (b *Backend) SetDecompiledDir(dir string) {
 // Register registers this backend with the default registry.
 func Register() {
 	backend.DefaultRegistry.Register(New(Options{
-		Timeout: 5 * time.Minute,
+		Timeout: 15 * time.Minute,
 	}))
 }
 

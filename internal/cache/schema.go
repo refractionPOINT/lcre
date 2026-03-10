@@ -135,4 +135,36 @@ CREATE TABLE IF NOT EXISTS entry_points (
     type TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_entry_points_address ON entry_points(address);
+
+-- Enrichments from external tools (raw JSON storage)
+CREATE TABLE IF NOT EXISTS enrichments (
+    id INTEGER PRIMARY KEY,
+    tool TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    raw_output TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_enrichments_tool ON enrichments(tool);
+
+-- Capabilities (from capa or similar tools)
+CREATE TABLE IF NOT EXISTS capabilities (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    namespace TEXT,
+    author TEXT,
+    scope TEXT,
+    attack_ids TEXT,
+    mbc_ids TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_capabilities_name ON capabilities(name);
+CREATE INDEX IF NOT EXISTS idx_capabilities_namespace ON capabilities(namespace);
+
+-- Packer/compiler detections (from diec or similar tools)
+CREATE TABLE IF NOT EXISTS packer_detections (
+    id INTEGER PRIMARY KEY,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    version TEXT,
+    string TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_packer_type ON packer_detections(type);
 `

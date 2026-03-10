@@ -30,3 +30,6 @@ vendor/
 # Temp
 /tmp/
 *.tmp
+
+# Analysis reports
+totally_not_secret_squirrel_stuff/

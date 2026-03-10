@@ -25,8 +25,22 @@ type Runner struct {
 // Run executes Ghidra analysis on the binary
 func (r *Runner) Run(ctx context.Context, binaryPath string) (*model.AnalysisResult, error) {
 	// Create workspace for Ghidra project and output
-	ws, err := workspace.New("lcre-ghidra-")
+	// Use ~/.cache/lcre/ghidra-tmp to avoid aggressive /tmp cleanup by system services
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+	ghidraTmpBase := filepath.Join(homeDir, ".cache", "lcre", "ghidra-tmp")
+	if err := os.MkdirAll(ghidraTmpBase, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create ghidra tmp base: %w", err)
+	}
+	tmpDir, err := os.MkdirTemp(ghidraTmpBase, "lcre-ghidra-")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+	ws, err := workspace.NewWithPath(tmpDir)
+	if err != nil {
+		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 	defer ws.Cleanup()

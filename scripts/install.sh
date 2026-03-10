@@ -82,7 +82,7 @@ detect_os() {
 # Check required tools
 check_dependencies() {
     local missing=()
-    for cmd in curl tar unzip; do
+    for cmd in curl tar 7z; do
         if ! command -v "$cmd" &> /dev/null; then
             missing+=("$cmd")
         fi
@@ -193,7 +193,7 @@ install_ghidra() {
 
     info "Extracting Ghidra (this may take a moment)..."
     mkdir -p "$ghidra_dir"
-    unzip -q "$tmp_file" -d "$ghidra_dir"
+    7z x -y -o"$ghidra_dir" "$tmp_file" > /dev/null
     rm -f "$tmp_file"
 
     success "Ghidra installed"

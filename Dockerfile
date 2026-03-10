@@ -20,7 +20,7 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y \
     openjdk-17-jdk \
     wget \
-    unzip \
+    p7zip-full \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ghidra
@@ -29,7 +29,7 @@ ARG GHIDRA_DATE=20240410
 
 RUN wget -q https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip \
     -O /tmp/ghidra.zip && \
-    unzip -q /tmp/ghidra.zip -d /opt && \
+    7z x -y -o/opt /tmp/ghidra.zip > /dev/null && \
     mv /opt/ghidra_${GHIDRA_VERSION}_PUBLIC /opt/ghidra && \
     rm /tmp/ghidra.zip
 
