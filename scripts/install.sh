@@ -358,9 +358,9 @@ main() {
 
     echo ""
     echo "Quick start:"
-    echo "  lcre --version          # Check installation"
+    echo "  lcre version            # Check installation"
     echo "  lcre analyze /bin/ls    # Quick analysis"
-    echo "  lcre analyze --deep /bin/ls  # Deep analysis with Ghidra"
+    echo "  lcre query functions /bin/ls  # Deep analysis with Ghidra"
     echo ""
     echo "To uninstall: ${INSTALL_DIR}/uninstall.sh"
     echo ""
