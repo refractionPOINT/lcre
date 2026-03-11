@@ -160,7 +160,8 @@ func parsePE(ctx context.Context, path string, result *model.AnalysisResult) err
 	imports, err := f.ImportedSymbols()
 	if err == nil {
 		for _, imp := range imports {
-			lib, fn := splitImport(imp)
+			// Go's pe.ImportedSymbols() returns "function:dll" format
+			fn, lib := splitImport(imp)
 			result.Imports = append(result.Imports, model.Import{
 				Library:  lib,
 				Function: fn,
