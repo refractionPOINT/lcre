@@ -77,7 +77,7 @@ func runQueryBytes(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	db.Close()
+	defer db.Close()
 
 	// Read bytes directly from file
 	f, err := os.Open(absPath)
@@ -143,7 +143,7 @@ func runQuerySearchBytes(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	db.Close()
+	defer db.Close()
 
 	// Check file size before reading (limit to 100MB for search)
 	const maxSearchSize = 100 * 1024 * 1024 // 100MB

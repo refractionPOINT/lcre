@@ -736,10 +736,14 @@ func (d *DB) QueryYARAMatches(ruleName string) ([]YARAMatch, error) {
 			return nil, err
 		}
 		if tags != "" {
-			json.Unmarshal([]byte(tags), &m.Tags)
+			if err := json.Unmarshal([]byte(tags), &m.Tags); err != nil {
+				return nil, fmt.Errorf("corrupt tags JSON for rule %q: %w", m.Rule, err)
+			}
 		}
 		if strs != "" {
-			json.Unmarshal([]byte(strs), &m.Strings)
+			if err := json.Unmarshal([]byte(strs), &m.Strings); err != nil {
+				return nil, fmt.Errorf("corrupt strings JSON for rule %q: %w", m.Rule, err)
+			}
 		}
 		results = append(results, m)
 	}
@@ -845,10 +849,12 @@ func parseAddress(s string) int64 {
 	return addr
 }
 
+// simplePatternRe matches patterns safe for FTS5 direct search.
+var simplePatternRe = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`)
+
 // isSimplePattern returns true if the pattern is a simple word search.
 func isSimplePattern(pattern string) bool {
-	// FTS5 doesn't handle special regex characters well
-	return regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(pattern)
+	return simplePatternRe.MatchString(pattern)
 }
 
 // escapeForFTS escapes special FTS5 characters.

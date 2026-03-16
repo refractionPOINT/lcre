@@ -8,14 +8,54 @@ import (
 	"github.com/refractionPOINT/lcre/internal/model"
 )
 
-// parseMachO parses a Mach-O binary and populates the result
+// parseMachO parses a Mach-O binary and populates the result.
+// Handles both single-architecture and fat/universal (0xCAFEBABE) binaries.
 func parseMachO(ctx context.Context, path string, result *model.AnalysisResult) error {
 	f, err := macho.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to open Mach-O file: %w", err)
+		// Try opening as a fat/universal binary
+		return parseMachOFat(ctx, path, result)
 	}
 	defer f.Close()
 
+	return parseMachOFile(ctx, f, result)
+}
+
+// parseMachOFat handles fat/universal Mach-O binaries containing multiple architectures.
+func parseMachOFat(ctx context.Context, path string, result *model.AnalysisResult) error {
+	fat, err := macho.OpenFat(path)
+	if err != nil {
+		return fmt.Errorf("failed to open Mach-O file: %w", err)
+	}
+	defer fat.Close()
+
+	if len(fat.Arches) == 0 {
+		return fmt.Errorf("fat Mach-O contains no architectures")
+	}
+
+	// Record all architectures present in the fat binary
+	var archNames []string
+	for _, arch := range fat.Arches {
+		archNames = append(archNames, machoArchName(arch.Cpu))
+	}
+	if len(archNames) > 1 {
+		result.Metadata.Arch = fmt.Sprintf("universal (%s)", joinArchNames(archNames))
+	}
+
+	// Parse the first architecture for detailed analysis
+	return parseMachOFile(ctx, fat.Arches[0].File, result)
+}
+
+func joinArchNames(names []string) string {
+	result := names[0]
+	for _, n := range names[1:] {
+		result += ", " + n
+	}
+	return result
+}
+
+// parseMachOFile extracts metadata from a single-architecture Mach-O file.
+func parseMachOFile(ctx context.Context, f *macho.File, result *model.AnalysisResult) error {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -23,29 +63,11 @@ func parseMachO(ctx context.Context, path string, result *model.AnalysisResult) 
 	default:
 	}
 
-	// Set architecture info
-	switch f.Cpu {
-	case macho.Cpu386:
-		result.Metadata.Arch = "x86"
-		result.Metadata.Bits = 32
-	case macho.CpuAmd64:
-		result.Metadata.Arch = "x86_64"
-		result.Metadata.Bits = 64
-	case macho.CpuArm:
-		result.Metadata.Arch = "ARM"
-		result.Metadata.Bits = 32
-	case macho.CpuArm64:
-		result.Metadata.Arch = "ARM64"
-		result.Metadata.Bits = 64
-	case macho.CpuPpc:
-		result.Metadata.Arch = "PPC"
-		result.Metadata.Bits = 32
-	case macho.CpuPpc64:
-		result.Metadata.Arch = "PPC64"
-		result.Metadata.Bits = 64
-	default:
-		result.Metadata.Arch = fmt.Sprintf("unknown (0x%x)", f.Cpu)
+	// Set architecture info (only if not already set by fat binary handler)
+	if result.Metadata.Arch == "" {
+		result.Metadata.Arch = machoArchName(f.Cpu)
 	}
+	result.Metadata.Bits = machoBits(f.Cpu)
 
 	// Mach-O byte order
 	if f.ByteOrder.String() == "LittleEndian" {
@@ -113,6 +135,36 @@ func parseMachO(ctx context.Context, path string, result *model.AnalysisResult) 
 	})
 
 	return nil
+}
+
+func machoArchName(cpu macho.Cpu) string {
+	switch cpu {
+	case macho.Cpu386:
+		return "x86"
+	case macho.CpuAmd64:
+		return "x86_64"
+	case macho.CpuArm:
+		return "ARM"
+	case macho.CpuArm64:
+		return "ARM64"
+	case macho.CpuPpc:
+		return "PPC"
+	case macho.CpuPpc64:
+		return "PPC64"
+	default:
+		return fmt.Sprintf("unknown (0x%x)", cpu)
+	}
+}
+
+func machoBits(cpu macho.Cpu) int {
+	switch cpu {
+	case macho.Cpu386, macho.CpuArm, macho.CpuPpc:
+		return 32
+	case macho.CpuAmd64, macho.CpuArm64, macho.CpuPpc64:
+		return 64
+	default:
+		return 0
+	}
 }
 
 // machoPermissions converts Mach-O section flags to permission string

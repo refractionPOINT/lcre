@@ -64,7 +64,7 @@ func runQueryCallPath(cmd *cobra.Command, args []string) error {
 	}
 	if from == nil {
 		if outputFormat == "json" {
-			fmt.Printf(`{"error": "source function not found: %s"}`+"\n", fromFunc)
+			outputJSON(map[string]string{"error": "source function not found: " + fromFunc})
 		} else {
 			fmt.Printf("Source function not found: %s\n", fromFunc)
 		}
@@ -77,7 +77,7 @@ func runQueryCallPath(cmd *cobra.Command, args []string) error {
 	}
 	if to == nil {
 		if outputFormat == "json" {
-			fmt.Printf(`{"error": "target function not found: %s"}`+"\n", toFunc)
+			outputJSON(map[string]string{"error": "target function not found: " + toFunc})
 		} else {
 			fmt.Printf("Target function not found: %s\n", toFunc)
 		}

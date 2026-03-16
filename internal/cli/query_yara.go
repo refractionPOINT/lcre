@@ -114,6 +114,7 @@ func runQueryYara(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to write embedded rules: %w", err)
 		}
+		defer os.Remove(rulesPath)
 		scanner.SetRulesFile(rulesPath)
 	}
 

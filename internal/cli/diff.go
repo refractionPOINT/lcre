@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -262,7 +261,60 @@ func computeDiff(a, b *model.AnalysisResult) *DiffResult {
 }
 
 func outputDiffMarkdown(diff *DiffResult) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(diff)
+	fmt.Printf("# Binary Diff\n\n")
+	fmt.Printf("**Binary A:** %s\n", diff.BinaryA)
+	fmt.Printf("**Binary B:** %s\n\n", diff.BinaryB)
+	fmt.Printf("**Summary:** %s\n\n", diff.Summary)
+
+	if len(diff.MetadataChanges) > 0 {
+		fmt.Print("## Metadata Changes\n\n")
+		fmt.Println("| Field | Binary A | Binary B |")
+		fmt.Println("|-------|----------|----------|")
+		for _, c := range diff.MetadataChanges {
+			fmt.Printf("| %s | %s | %s |\n", c.Field, c.OldValue, c.NewValue)
+		}
+		fmt.Println()
+	}
+
+	if len(diff.SectionChanges) > 0 {
+		fmt.Print("## Section Changes\n\n")
+		for _, sec := range diff.SectionChanges {
+			switch sec.Status {
+			case "added":
+				fmt.Printf("- **%s**: added\n", sec.Name)
+			case "removed":
+				fmt.Printf("- **%s**: removed\n", sec.Name)
+			case "modified":
+				fmt.Printf("- **%s**: modified\n", sec.Name)
+				for _, c := range sec.Changes {
+					fmt.Printf("  - %s: %s -> %s\n", c.Field, c.OldValue, c.NewValue)
+				}
+			}
+		}
+		fmt.Println()
+	}
+
+	if len(diff.ImportChanges.Added) > 0 || len(diff.ImportChanges.Removed) > 0 {
+		fmt.Print("## Import Changes\n\n")
+		for _, imp := range diff.ImportChanges.Added {
+			fmt.Printf("- **+** %s:%s\n", imp.Library, imp.Function)
+		}
+		for _, imp := range diff.ImportChanges.Removed {
+			fmt.Printf("- **-** %s:%s\n", imp.Library, imp.Function)
+		}
+		fmt.Println()
+	}
+
+	if len(diff.ExportChanges.Added) > 0 || len(diff.ExportChanges.Removed) > 0 {
+		fmt.Print("## Export Changes\n\n")
+		for _, exp := range diff.ExportChanges.Added {
+			fmt.Printf("- **+** %s\n", exp.Name)
+		}
+		for _, exp := range diff.ExportChanges.Removed {
+			fmt.Printf("- **-** %s\n", exp.Name)
+		}
+		fmt.Println()
+	}
+
+	return nil
 }
