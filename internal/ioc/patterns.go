@@ -147,7 +147,7 @@ func (p *Patterns) IsValidDomain(domain string) bool {
 	}
 
 	// Filter out .NET/Java namespace prefixes (e.g., System.IO, Microsoft.CSharp).
-	// Also handles corrupted metadata where a junk byte precedes the namespace
+	// Also handles corrupted metadata where 1-2 junk bytes precede the namespace
 	// (e.g., "3System.Resources" or "lSystem.Resources").
 	lower := strings.ToLower(domain)
 	namespacePrefixes := []string{
@@ -156,8 +156,14 @@ func (p *Patterns) IsValidDomain(domain string) bool {
 		"org.xml.", "org.w3c.",
 	}
 	for _, prefix := range namespacePrefixes {
-		if strings.HasPrefix(lower, prefix) || strings.Contains(lower, prefix) {
+		if strings.HasPrefix(lower, prefix) {
 			return false
+		}
+		// Check for 1-2 char junk prefix before namespace (corrupted metadata)
+		for _, offset := range []int{1, 2} {
+			if len(lower) > offset+len(prefix) && lower[offset:offset+len(prefix)] == prefix {
+				return false
+			}
 		}
 	}
 
@@ -209,9 +215,10 @@ func looksLikeCodeIdentifier(s string) bool {
 	}
 	// If the majority of segments start with uppercase, it's likely a code
 	// identifier (e.g., "Rtxtjown.Properties.Resources.resources" has 3/4).
-	// For 2-part names, one PascalCase segment is enough (e.g., "Webcam.webcam").
+	// For 2-part names, require BOTH segments to be PascalCase (e.g.,
+	// "Webcam.Webcam") to avoid filtering legitimate domains like "Google.com".
 	if len(parts) == 2 {
-		return pascalCount >= 1
+		return pascalCount == 2
 	}
 	return pascalCount*2 >= len(parts) && pascalCount >= 2
 }
